@@ -24,6 +24,99 @@
 ;;; Code:
 
 (require 'cl)
+(require 'svg)
+
+(defun smalldisplay (size texts &optional image)
+  (let ((svg (svg-create (car size) (cdr size)
+			 :xmlns:xlink "http://www.w3.org/1999/xlink")))
+    (when image
+      (let ((image-size (image-size (create-image image) t))
+	    ratio)
+	;; Ensure that the image fits on the screen by scaling up/down.
+	(setq ratio (/ (* (car size) 1.0) (car image-size)))
+	(when (< (* ratio (cdr image-size))
+		 (cdr size))
+	  (setq ratio (/ (* (cdr size) 1.0) (cdr image-size))))
+	(svg-embed svg image
+		   (if (string-match "jpg$" image)
+		       "image/jpeg"
+		     (format "image/%s"
+			     (car (last (split-string image "[.]")))))
+		   nil
+		   :width (* (car image-size) ratio)
+		   :height (* (cdr image-size) ratio)
+		   ;; Show the center part of the image.
+		   :x (- (/ (- (* ratio (car image-size)) (car size)) 2))
+		   :y (- (/ (- (* ratio (cdr image-size)) (cdr size)) 2)))))
+    (loop for (position y strings) in texts
+	  do (svg-multi-line-text
+	      svg strings
+	      :text-anchor (if (memq position '(top-right bottom-right))
+			       "right"
+			     "left")
+	      :x (if (memq position '(top-right bottom-right))
+		     (- (car size) 20)
+		   20)
+	      :y (or y
+		     (if (memq position '(bottom-left bottom-right))
+			 (- (cdr size) (* (length texts) 100) 20)
+		       20))
+	      :font-size 50
+	      :stroke "black"
+	      :stroke-width "2px"
+	      :font-weight "bold"
+	      :fill "white"
+	      :font-family "futura"))
+      
+    (with-temp-buffer
+      (set-buffer-multibyte nil)
+      (svg-print svg)
+      (call-process-region (point-min) (point-max) "convert"
+			   t (current-buffer)
+			   nil "svg:-" "png:-")
+      (buffer-string))))
+
+(defun svg-multi-line-text (svg texts &rest args)
+  "Add TEXT to SVG."
+  (let ((a (svg--arguments svg args)))
+    (svg--append
+     svg
+     (apply
+      'dom-node 'text `(,@a)
+      (cl-loop for text in texts
+	       collect (dom-node 'tspan `((dy . "1.0em")
+					  (x . ,(cdr (assoc 'x a))))
+				 (svg--encode-text text)))))))
+
+(defun smalldisplay--temp ()
+  (with-temp-buffer
+    (insert-file-contents "~/jukebox/tex/tempdata.data")
+    (split-string (buffer-string) "[\\\\\n]" t)))
+
+(defun smalldisplay--track ()
+  (with-temp-buffer
+    (insert-file-contents "~/jukebox/tex/tdata.txt")
+    (split-string (buffer-string) "[\\\\\n]" t)))
+
+(defun smalldisplay-current ()
+  (with-temp-buffer
+    (insert-file-contents "/music/tmp/.amp.current")
+    (buffer-substring (point-min) (1- (point-max)))))
+
+(defun smalldisplay-stories ()
+  (let* ((temp (smalldisplay--temp))
+	 (track (smalldisplay--track))
+	 (current (smalldisplay--current))
+	 (image (smalldisplay '(800 . 480)
+			      `((bottom-left 310 ,track)
+				(top-right 0 ,temp))
+			      (expand-file-name
+			       "sleeve.jpg" (file-name-directory current)))))
+    (with-temp-buffer
+      (set-buffer-multibyte nil)
+      (insert image)
+      (write-region (point-min) (point-max) "/tmp/a.png")
+      (call-process "qiv" nil nil nil "/tmp/a.png"))))
 
 (provide 'smalldisplay)
 
