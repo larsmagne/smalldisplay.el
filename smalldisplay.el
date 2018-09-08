@@ -28,10 +28,9 @@
 (require 'cl)
 (require 'svg)
 
-(defun smalldisplay (size texts &optional image font-size)
+(defun smalldisplay (size texts &optional image)
   (let ((svg (svg-create (car size) (cdr size)
-			 :xmlns:xlink "http://www.w3.org/1999/xlink"))
-	(font-size (or font-size 50)))
+			 :xmlns:xlink "http://www.w3.org/1999/xlink")))
     (when image
       (let ((image-size (image-size (create-image image) t))
 	    ratio)
@@ -51,28 +50,7 @@
 		   ;; Show the center part of the image.
 		   :x (- (/ (- (* ratio (car image-size)) (car size)) 2))
 		   :y (- (/ (- (* ratio (cdr image-size)) (cdr size)) 2)))))
-    (loop for (position y strings) in texts
-	  do (loop for stroke in (list (/ font-size 16) 1)
-		   do (svg-multi-line-text
-		       svg strings
-		       :text-anchor
-		       (if (memq position '(top-right bottom-right))
-			   "right"
-			 "left")
-		       :x (if (memq position '(top-right bottom-right))
-			      (- (car size) 20)
-			    20)
-		       :y (or y
-			      (if (memq position '(bottom-left bottom-right))
-				  (- (cdr size) (* (length texts) 100) 20)
-				20))
-		       :font-size font-size
-		       :stroke "black"
-		       :stroke-width (format "%dpx" stroke)
-		       :font-weight "bold"
-		       :fill "white"
-		       :font-family "futura")))
-      
+    (smalldisplay-text svg size texts)      
     (with-temp-buffer
       (set-buffer-multibyte nil)
       (svg-print svg)
@@ -110,8 +88,8 @@
   (with-temp-buffer
     (set-buffer-multibyte nil)
     (insert (smalldisplay '(800 . 480)
-			  `((bottom-left 310 ,(smalldisplay--track))
-			    (top-right 0 ,(smalldisplay--temp)))
+			  `((bottom-left 310 50 ,(smalldisplay--track))
+			    (top-right 0 50 ,(smalldisplay--temp)))
 			  (expand-file-name
 			   "sleeve.jpg" (file-name-directory
 					 (smalldisplay--current)))))
@@ -123,11 +101,10 @@
   (with-temp-buffer
     (set-buffer-multibyte nil)
     (insert (smalldisplay '(1200 . 800)
-			  `((top-left 0 ,(smalldisplay--track)))
+			  `((top-left 0 150 ,(smalldisplay--track)))
 			  (expand-file-name
 			   "sleeve.jpg" (file-name-directory
-					 (smalldisplay--current)))
-			  150))
+					 (smalldisplay--current)))))
     (call-process-region (point-min) (point-max)
 			 "xloadimage" nil nil nil
 			 "-display" ":1" "-onroot" "-gamma" "2" "stdin")))
@@ -138,9 +115,10 @@
     (insert (smalldisplay-potato-1
 	     '(1024 . 600)
 	     `((top-right 0 70 ,(list (format-time-string "%H:%M")
-				      (car (smalldisplay--temp)))))
+				      (car (smalldisplay--temp))))
+	       (bottom-right 520 20 ,(smalldisplay--track)))
 	     (smalldisplay-smooth
-	      (loop for point in points
+	      (loop for point in (smalldisplay-rain)
 		    collect (cons (* (car point) (/ 1024.0 24))
 				  (- 600 (* (cdr point) 130)))))))
     (write-region (point-min) (point-max) "/tmp/a.png")
@@ -161,18 +139,19 @@
 (defun smalldisplay-potato-1 (size texts rain)
   (let ((svg (svg-create (car size) (cdr size)
 			 :xmlns:xlink "http://www.w3.org/1999/xlink")))
-    (smalldisplay-text svg size texts)
     (svg-path svg
 	      :d (smalldisplay-path rain)
-	      :stroke-width 10
+	      :stroke-width 7
 	      :fill "none"
-	      :stroke "grey")
+	      :stroke "white")
+    (smalldisplay-text svg size texts)
     (with-temp-buffer
       (set-buffer-multibyte nil)
       (svg-print svg)
       (call-process-region (point-min) (point-max) "convert"
 			   t (list (current-buffer) nil)
-			   nil "svg:-" "png:-")
+			   nil "-background" "transparent"
+			   "svg:-" "png:-")
       (buffer-string))))
 
 (defun smalldisplay-rain ()
@@ -205,19 +184,19 @@
     (cons (+ (car current) (* (cos angle) length))
 	  (+ (cdr current) (* (sin angle) length)))))
 
-(defun smalldisplay-bezier (i a)
-  (let ((cps (smalldisplay-control-point (elt a (- i 1))
-					 (elt a (- i 2))
-					 (elt a i)
+(defun smalldisplay-bezier (i points)
+  (let ((cps (smalldisplay-control-point (elt points (- i 1))
+					 (elt points (- i 2))
+					 (elt points i)
 					 nil))
-	(cpe (smalldisplay-control-point (elt a i)
-					 (elt a (1- i))
-					 (elt a (1+ i))
+	(cpe (smalldisplay-control-point (elt points i)
+					 (elt points (1- i))
+					 (elt points (1+ i))
 					 t)))
     (format "C %s,%s %s,%s %s,%s"
 	    (car cps) (cdr cps)
 	    (car cpe) (cdr cpe)
-	    (car (elt a i)) (cdr (elt a i)))))
+	    (car (elt points i)) (cdr (elt points i)))))
 
 (defun svg-path (svg &rest args)
   "Add TEXT to SVG."
