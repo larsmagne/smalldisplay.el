@@ -261,15 +261,15 @@
 	  :angle (atan length-y length-x))))
 
 (defun smalldisplay-control-point (current previous next reverse)
-  (let* ((p (or previous current))
-	 (n (or next current))
-	 (o (smalldisplay-line p n))
-	 (angle (+ (getf o :angle)
+  (let* ((previous (or previous current))
+	 (next (or next current))
+	 (line (smalldisplay-line previous next))
+	 (angle (+ (getf line :angle)
 		   (if reverse
 		       pi
 		     0)))
 	 (smoothing 0.2)
-	 (length (* (getf o :length) smoothing)))
+	 (length (* (getf line :length) smoothing)))
     (cons (+ (car current) (* (cos angle) length))
 	  (+ (cdr current) (* (sin angle) length)))))
 
