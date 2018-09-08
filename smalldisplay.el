@@ -26,9 +26,10 @@
 (require 'cl)
 (require 'svg)
 
-(defun smalldisplay (size texts &optional image)
+(defun smalldisplay (size texts &optional image font-size)
   (let ((svg (svg-create (car size) (cdr size)
-			 :xmlns:xlink "http://www.w3.org/1999/xlink")))
+			 :xmlns:xlink "http://www.w3.org/1999/xlink"))
+	(font-size (or font-size 50)))
     (when image
       (let ((image-size (image-size (create-image image) t))
 	    ratio)
@@ -49,24 +50,26 @@
 		   :x (- (/ (- (* ratio (car image-size)) (car size)) 2))
 		   :y (- (/ (- (* ratio (cdr image-size)) (cdr size)) 2)))))
     (loop for (position y strings) in texts
-	  do (svg-multi-line-text
-	      svg strings
-	      :text-anchor (if (memq position '(top-right bottom-right))
-			       "right"
-			     "left")
-	      :x (if (memq position '(top-right bottom-right))
-		     (- (car size) 20)
-		   20)
-	      :y (or y
-		     (if (memq position '(bottom-left bottom-right))
-			 (- (cdr size) (* (length texts) 100) 20)
-		       20))
-	      :font-size 50
-	      :stroke "black"
-	      :stroke-width "2px"
-	      :font-weight "bold"
-	      :fill "white"
-	      :font-family "futura"))
+	  do (loop for stroke in (list (/ font-size 16) 1)
+		   do (svg-multi-line-text
+		       svg strings
+		       :text-anchor
+		       (if (memq position '(top-right bottom-right))
+			   "right"
+			 "left")
+		       :x (if (memq position '(top-right bottom-right))
+			      (- (car size) 20)
+			    20)
+		       :y (or y
+			      (if (memq position '(bottom-left bottom-right))
+				  (- (cdr size) (* (length texts) 100) 20)
+				20))
+		       :font-size font-size
+		       :stroke "black"
+		       :stroke-width (format "%dpx" stroke)
+		       :font-weight "bold"
+		       :fill "white"
+		       :font-family "futura")))
       
     (with-temp-buffer
       (set-buffer-multibyte nil)
@@ -94,29 +97,38 @@
     (split-string (buffer-string) "[\\\\\n]" t)))
 
 (defun smalldisplay--track ()
-  (with-temp-buffer
-    (insert-file-contents "~/jukebox/tex/tdata.txt")
-    (split-string (buffer-string) "[\\\\\n]" t)))
+  (jukebox-tokenize-path (smalldisplay--current)))
 
-(defun smalldisplay-current ()
+(defun smalldisplay--current ()
   (with-temp-buffer
     (insert-file-contents "/music/tmp/.amp.current")
     (buffer-substring (point-min) (1- (point-max)))))
 
 (defun smalldisplay-stories ()
-  (let* ((temp (smalldisplay--temp))
-	 (track (smalldisplay--track))
-	 (current (smalldisplay--current))
-	 (image (smalldisplay '(800 . 480)
-			      `((bottom-left 310 ,track)
-				(top-right 0 ,temp))
-			      (expand-file-name
-			       "sleeve.jpg" (file-name-directory current)))))
-    (with-temp-buffer
-      (set-buffer-multibyte nil)
-      (insert image)
-      (write-region (point-min) (point-max) "/tmp/a.png")
-      (call-process "qiv" nil nil nil "/tmp/a.png"))))
+  (with-temp-buffer
+    (set-buffer-multibyte nil)
+    (insert (smalldisplay '(800 . 480)
+			  `((bottom-left 310 ,(smalldisplay--track))
+			    (top-right 0 ,(smalldisplay--temp)))
+			  (expand-file-name
+			   "sleeve.jpg" (file-name-directory
+					 (smalldisplay--current)))))
+    (call-process-region (point-min) (point-max)
+			 "xloadimage" nil nil nil
+			 "-display" ":1" "-onroot" "-gamma" "2" "stdin")))
+
+(defun smalldisplay-quimbies ()
+  (with-temp-buffer
+    (set-buffer-multibyte nil)
+    (insert (smalldisplay '(1200 . 800)
+			  `((top-left 0 ,(smalldisplay--track)))
+			  (expand-file-name
+			   "sleeve.jpg" (file-name-directory
+					 (smalldisplay--current)))
+			  150))
+    (call-process-region (point-min) (point-max)
+			 "xloadimage" nil nil nil
+			 "-display" ":1" "-onroot" "-gamma" "2" "stdin")))
 
 (provide 'smalldisplay)
 
