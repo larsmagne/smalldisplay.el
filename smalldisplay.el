@@ -27,12 +27,21 @@
 
 (require 'cl)
 (require 'svg)
+(require 'jukebox)
+
+(defun smalldisplay-image-size (file)
+  (with-temp-buffer
+    (call-process "identify" nil (current-buffer) nil
+		  "-format" "%wx%h" file)
+    (let ((size (split-string (buffer-string) "x")))
+      (cons (string-to-number (car size))
+	    (string-to-number (cadr size))))))
 
 (defun smalldisplay (size texts &optional image)
   (let ((svg (svg-create (car size) (cdr size)
 			 :xmlns:xlink "http://www.w3.org/1999/xlink")))
     (when image
-      (let ((image-size (image-size (create-image image) t))
+      (let ((image-size (smalldisplay-image-size image))
 	    ratio)
 	;; Ensure that the image fits on the screen by scaling up/down.
 	(setq ratio (/ (* (car size) 1.0) (car image-size)))
@@ -79,10 +88,25 @@
 (defun smalldisplay--track ()
   (jukebox-tokenize-path (smalldisplay--current)))
 
+(defvar smalldisplay-current-track "/music/tmp/.amp.current")
+
 (defun smalldisplay--current ()
   (with-temp-buffer
-    (insert-file-contents "/music/tmp/.amp.current")
+    (insert-file-contents smalldisplay-current-track)
     (buffer-substring (point-min) (1- (point-max)))))
+
+(defun smalldisplay-loop-stories ()
+  (let ((timestamp nil)
+	new) 
+    (loop for i from 0
+	  when (or
+		(not (equal (setq new (file-attribute-modification-time
+				       (file-attributes
+					smalldisplay-current-track)))
+			    timestamp))
+		(zerop (mod i 60)))
+	  do (smalldisplay-stories)
+	  do (sleep-for 1))))
 
 (defun smalldisplay-stories ()
   (with-temp-buffer
