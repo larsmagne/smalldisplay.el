@@ -21,6 +21,8 @@
 
 ;;; Commentary:
 
+;; # apt install xloadimage
+
 ;;; Code:
 
 (require 'cl)
@@ -129,6 +131,124 @@
     (call-process-region (point-min) (point-max)
 			 "xloadimage" nil nil nil
 			 "-display" ":1" "-onroot" "-gamma" "2" "stdin")))
+
+(defun smalldisplay-potato ()
+  (with-temp-buffer
+    (set-buffer-multibyte nil)
+    (insert (smalldisplay-potato-1
+	     '(1024 . 600)
+	     `((top-right 0 70 ,(list (format-time-string "%H:%M")
+				      (car (smalldisplay--temp)))))
+	     (loop for point in points
+		   repeat 24
+		   collect (smalldisplay-smooth
+			    (cons (* (car point) (/ 1024.0 24))
+				  (- 600 (* (cdr point) 100)))))))
+    (write-region (point-min) (point-max) "/tmp/a.png")
+    (call-process "qiv" nil nil nil "/tmp/a.png")))
+
+(defun smalldisplay-smooth (points)
+  )
+
+(defun smalldisplay-potato-1 (size texts rain)
+  (let ((svg (svg-create (car size) (cdr size)
+			 :xmlns:xlink "http://www.w3.org/1999/xlink")))
+    (smalldisplay-text svg texts)
+    (svg-path svg
+	      :d (smalldisplay-path rain)
+	      :stroke-width 10
+	      :fill "none"
+	      :stroke "grey")
+    (with-temp-buffer
+      (set-buffer-multibyte nil)
+      (svg-print svg)
+      (call-process-region (point-min) (point-max) "convert"
+			   t (list (current-buffer) nil)
+			   nil "svg:-" "png:-")
+      (buffer-string))))
+
+(defun smalldisplay-rain ()
+  (with-current-buffer
+      (url-retrieve-synchronously "http://www.yr.no/stad/Noreg/Oslo/Oslo/Oslo/varsel_time_for_time.xml")
+    (goto-char (point-min))
+    (when (search-forward "\n\n" nil t)
+      (loop for elem in (dom-by-tag
+			 (libxml-parse-xml-region (point) (point-max))
+			 'precipitation)
+	    for i from 0 upto 30
+	    collect (cons i (string-to-number (dom-attr elem 'value)))))))
+
+(defun smalldisplay-line (a b)
+  (let ((length-x (- (car b) (car a)))
+	(length-y (- (cdr b) (cdr a))))
+    (list :length (sqrt (+ (expt length-x 2) (expt length-y 2)))
+	  :angle (atan length-y length-x))))
+
+(defun smalldisplay-control-point (current previous next reverse)
+  (let* ((p (or previous current))
+	(n (or next current))
+	(o (smalldisplay-line p n))
+	(angle (+ (getf o :angle)
+		  (if reverse
+		      pi
+		    0)))
+	(smoothing 0.4)
+	(length (* (getf o :length) smoothing)))
+    (cons (+ (car current) (* (cos angle) length))
+	  (+ (cdr current) (* (sin angle) length)))))
+
+(defun smalldisplay-bezier (point i a)
+  (let ((cps (smalldisplay-control-point (elt a (1- i))
+					 (elt a (- i 2))
+					 point nil))
+	(cpe (smalldisplay-control-point (elt a (1- i))
+					 (elt a (1+ i))
+					 point t)))
+    (format "C %s,%s %s,%s %s,%s"
+	    (car cps) (cdr cps)
+	    (car cpe) (cdr cps)
+	    (car point) (cdr point))))
+
+(defun svg-path (svg &rest args)
+  "Add TEXT to SVG."
+  (svg--append
+   svg
+   (dom-node
+    'path
+    `(,@(svg--arguments svg args)))))
+
+(defun smalldisplay-path (points)
+  (mapconcat
+   #'identity
+   (loop for point in points
+	 for i from 0
+	 collect (if (zerop i)
+		     (format "M %s,%s" (car point) (cdr point))
+		   (smalldisplay-bezier point i points)))
+   " "))
+
+(defun smalldisplay-text (svg texts)
+  (loop for (position y font-size strings) in texts
+	do (loop for stroke in (list (/ font-size 16) 1)
+		 do (svg-multi-line-text
+		     svg strings
+		     :text-anchor
+		     (if (memq position '(top-right bottom-right))
+			 "right"
+		       "left")
+		     :x (if (memq position '(top-right bottom-right))
+			    (- (car size) 20)
+			  20)
+		     :y (or y
+			    (if (memq position '(bottom-left bottom-right))
+				(- (cdr size) (* (length texts) 100) 20)
+			      20))
+		     :font-size font-size
+		     :stroke "black"
+		     :stroke-width (format "%dpx" stroke)
+		     :font-weight "bold"
+		     :fill "white"
+		     :font-family "futura"))))
 
 (provide 'smalldisplay)
 
