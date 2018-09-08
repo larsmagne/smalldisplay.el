@@ -139,16 +139,24 @@
 	     '(1024 . 600)
 	     `((top-right 0 70 ,(list (format-time-string "%H:%M")
 				      (car (smalldisplay--temp)))))
-	     (loop for point in points
-		   repeat 24
-		   collect (smalldisplay-smooth
-			    (cons (* (car point) (/ 1024.0 24))
-				  (- 600 (* (cdr point) 100)))))))
+	     (smalldisplay-smooth
+	      (loop for point in points
+		    collect (cons (* (car point) (/ 1024.0 24))
+				  (- 600 (* (cdr point) 130)))))))
     (write-region (point-min) (point-max) "/tmp/a.png")
     (call-process "qiv" nil nil nil "/tmp/a.png")))
 
 (defun smalldisplay-smooth (points)
-  )
+  (let ((acc 0)
+	(length 4))
+    (dotimes (i length)
+      (incf acc (cdr (elt points i))))
+    (loop for i from length upto (+ 24 length)
+	  collect (cons (car (elt points (- i (/ length 2))))
+			(prog2
+			    (incf acc (cdr (elt points i)))
+			    (/ (* acc 1.0) (1+ length))
+			  (decf acc (cdr (elt points (- i length)))))))))
 
 (defun smalldisplay-potato-1 (size texts rain)
   (let ((svg (svg-create (car size) (cdr size)
@@ -175,7 +183,7 @@
       (loop for elem in (dom-by-tag
 			 (libxml-parse-xml-region (point) (point-max))
 			 'precipitation)
-	    for i from 0 upto 30
+	    for i from 0
 	    collect (cons i (string-to-number (dom-attr elem 'value)))))))
 
 (defun smalldisplay-line (a b)
@@ -186,24 +194,26 @@
 
 (defun smalldisplay-control-point (current previous next reverse)
   (let* ((p (or previous current))
-	(n (or next current))
-	(o (smalldisplay-line p n))
-	(angle (+ (getf o :angle)
-		  (if reverse
-		      pi
-		    0)))
-	(smoothing 0.4)
-	(length (* (getf o :length) smoothing)))
+	 (n (or next current))
+	 (o (smalldisplay-line p n))
+	 (angle (+ (getf o :angle)
+		   (if reverse
+		       pi
+		     0)))
+	 (smoothing 0.2)
+	 (length (* (getf o :length) smoothing)))
     (cons (+ (car current) (* (cos angle) length))
 	  (+ (cdr current) (* (sin angle) length)))))
 
-(defun smalldisplay-bezier (point i a)
-  (let ((cps (smalldisplay-control-point (elt a (1- i))
+(defun smalldisplay-bezier (i a)
+  (let ((cps (smalldisplay-control-point (elt a (- i 1))
 					 (elt a (- i 2))
-					 point nil))
-	(cpe (smalldisplay-control-point (elt a (1- i))
+					 (elt a i)
+					 nil))
+	(cpe (smalldisplay-control-point (elt a i)
+					 (elt a (1- i))
 					 (elt a (1+ i))
-					 point t)))
+					 t)))
     (format "C %s,%s %s,%s %s,%s"
 	    (car cps) (cdr cps)
 	    (car cpe) (cdr cps)
@@ -224,7 +234,7 @@
 	 for i from 0
 	 collect (if (zerop i)
 		     (format "M %s,%s" (car point) (cdr point))
-		   (smalldisplay-bezier point i points)))
+		   (smalldisplay-bezier i points)))
    " "))
 
 (defun smalldisplay-text (svg texts)
