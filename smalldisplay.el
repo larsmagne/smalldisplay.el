@@ -106,9 +106,45 @@
 			    timestamp))
 		(zerop (mod i 60)))
 	  do (smalldisplay-stories)
+	  (setq timestamp new)
+	  do (sleep-for 1))))
+
+(defun smalldisplay-loop-quimbies ()
+  (let ((timestamp nil)
+	new) 
+    (loop
+     (when (not (equal (setq new (file-attribute-modification-time
+				  (file-attributes
+				   smalldisplay-current-track)))
+		       timestamp))
+       (setq timestamp new)
+       (smalldisplay-quimbies))
+     (sleep-for 1))))
+
+(defun smalldisplay-mpv-id ()
+  (with-temp-buffer
+    (call-process "~/src/flit/grepwindow" nil (current-buffer) nil
+		  "x11")
+    (buffer-string)))
+
+(defun smalldisplay-loop-potato ()
+  (let ((timestamp nil)
+	new mpv new-mpv) 
+    (loop for i from 0
+	  when (or
+		(not (equal (setq new (file-attribute-modification-time
+				       (file-attributes
+					smalldisplay-current-track)))
+			    timestamp))
+		(not (equal (setq new-mpv (smalldisplay-mpv-id)) mpv))
+		(zerop (mod i 30)))
+	  do (smalldisplay-potato)
+	  (setq timestamp new
+		mpv new-mpv)
 	  do (sleep-for 1))))
 
 (defun smalldisplay-stories ()
+  (message (format-time-string "%H:%M:%S Making"))
   (with-temp-buffer
     (set-buffer-multibyte nil)
     (insert (smalldisplay '(800 . 480)
@@ -122,9 +158,10 @@
 			 "-display" ":1" "-onroot" "-gamma" "2" "stdin")))
 
 (defun smalldisplay-quimbies ()
+  (message (format-time-string "%H:%M:%S Making"))
   (with-temp-buffer
     (set-buffer-multibyte nil)
-    (insert (smalldisplay '(1200 . 800)
+    (insert (smalldisplay '(1280 . 800)
 			  `((top-left 0 150 ,(smalldisplay--track)))
 			  (expand-file-name
 			   "sleeve.jpg" (file-name-directory
@@ -132,6 +169,8 @@
     (call-process-region (point-min) (point-max)
 			 "xloadimage" nil nil nil
 			 "-display" ":1" "-onroot" "-gamma" "2" "stdin")))
+
+(defvar smalldisplay-displayer nil)
 
 (defun smalldisplay-potato ()
   (with-temp-buffer
@@ -146,7 +185,13 @@
 		    collect (cons (* (car point) (/ 1024.0 24))
 				  (- 600 (* (cdr point) 130)))))))
     (write-region (point-min) (point-max) "/tmp/a.png")
-    (call-process "qiv" nil nil nil "/tmp/a.png")))
+    (let ((prev smalldisplay-displayer))
+      (setq smalldisplay-displayer
+	    (start-process "qiv" nil "/usr/src/qiv-2.2.4/qiv"
+			   "-p" "--display" ":1" "/tmp/a.png"))
+      (when prev
+	(sleep-for 0.1)
+	(delete-process prev)))))
 
 (defun smalldisplay-smooth (points)
   (let ((acc 0)
@@ -178,16 +223,29 @@
 			   "svg:-" "png:-")
       (buffer-string))))
 
+(defvar smalldisplay-rain nil)
+(defvar smalldisplay-rain-count 0)
+
 (defun smalldisplay-rain ()
-  (with-current-buffer
-      (url-retrieve-synchronously "http://www.yr.no/stad/Noreg/Oslo/Oslo/Oslo/varsel_time_for_time.xml")
-    (goto-char (point-min))
-    (when (search-forward "\n\n" nil t)
-      (loop for elem in (dom-by-tag
-			 (libxml-parse-xml-region (point) (point-max))
-			 'precipitation)
-	    for i from 0
-	    collect (cons i (string-to-number (dom-attr elem 'value)))))))
+  (if (and smalldisplay-rain
+	   (not (zerop (mod (incf smalldisplay-rain-count) 60))))
+    ;; Serve the cached rain values usually.
+    smalldisplay-rain
+    (let ((rain
+	   (with-current-buffer
+	       (url-retrieve-synchronously
+		"http://www.yr.no/stad/Noreg/Oslo/Oslo/Oslo/varsel_time_for_time.xml"
+		nil nil 30)
+	     (goto-char (point-min))
+	     (when (search-forward "\n\n" nil t)
+	       (loop for elem in (dom-by-tag
+				  (libxml-parse-xml-region (point) (point-max))
+				  'precipitation)
+		     for i from 0
+		     collect (cons i (string-to-number
+				      (dom-attr elem 'value))))))))
+      (setq smalldisplay-rain rain)
+      rain)))
 
 (defun smalldisplay-line (a b)
   (let ((length-x (- (car b) (car a)))
