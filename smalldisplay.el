@@ -161,7 +161,7 @@
 (defun smalldisplay-potato-1 (size texts rain)
   (let ((svg (svg-create (car size) (cdr size)
 			 :xmlns:xlink "http://www.w3.org/1999/xlink")))
-    (smalldisplay-text svg texts)
+    (smalldisplay-text svg size texts)
     (svg-path svg
 	      :d (smalldisplay-path rain)
 	      :stroke-width 10
@@ -216,8 +216,8 @@
 					 t)))
     (format "C %s,%s %s,%s %s,%s"
 	    (car cps) (cdr cps)
-	    (car cpe) (cdr cps)
-	    (car point) (cdr point))))
+	    (car cpe) (cdr cpe)
+	    (car (elt a i)) (cdr (elt a i)))))
 
 (defun svg-path (svg &rest args)
   "Add TEXT to SVG."
@@ -237,7 +237,7 @@
 		   (smalldisplay-bezier i points)))
    " "))
 
-(defun smalldisplay-text (svg texts)
+(defun smalldisplay-text (svg size texts)
   (loop for (position y font-size strings) in texts
 	do (loop for stroke in (list (/ font-size 16) 1)
 		 do (svg-multi-line-text
