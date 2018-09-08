@@ -86,7 +86,13 @@
     (split-string (buffer-string) "[\\\\\n]" t)))
 
 (defun smalldisplay--track ()
-  (jukebox-tokenize-path (smalldisplay--current)))
+  (let ((track (jukebox-tokenize-path (smalldisplay--current))))
+    ;; If the album and song name is the same, then drop the track
+    ;; name.
+    (if (equal (nth 1 track)
+	       (nth 2 track))
+	(list (car track) (cadr track))
+      track)))
 
 (defvar smalldisplay-current-track "/music/tmp/.amp.current")
 
@@ -95,31 +101,30 @@
     (insert-file-contents smalldisplay-current-track)
     (buffer-substring (point-min) (1- (point-max)))))
 
-(defun smalldisplay-loop-stories ()
-  (let ((timestamp nil)
-	new) 
-    (loop for i from 0
-	  when (or
-		(not (equal (setq new (file-attribute-modification-time
+(defvar smalldisplay-current-track-last nil)
+
+(defun smalldisplay-track-changed-p ()
+  (let ((new (list (file-attribute-modification-time
 				       (file-attributes
-					smalldisplay-current-track)))
-			    timestamp))
-		(zerop (mod i 60)))
-	  do (smalldisplay-stories)
-	  (setq timestamp new)
-	  do (sleep-for 1))))
+					smalldisplay-current-track))
+		   (smalldisplay--current))))
+    (if (equal new smalldisplay-current-track-last)
+	nil
+      (setq smalldisplay-current-track-last new)
+      t)))  
+
+(defun smalldisplay-loop-stories ()
+  (loop for i from 0
+	when (or (smalldisplay-track-changed-p)
+		 (zerop (mod i 60)))
+	do (smalldisplay-stories)
+	do (sleep-for 1)))
 
 (defun smalldisplay-loop-quimbies ()
-  (let ((timestamp nil)
-	new) 
-    (loop
-     (when (not (equal (setq new (file-attribute-modification-time
-				  (file-attributes
-				   smalldisplay-current-track)))
-		       timestamp))
-       (setq timestamp new)
-       (smalldisplay-quimbies))
-     (sleep-for 1))))
+  (loop
+   (when (smalldisplay-track-changed-p)
+     (smalldisplay-quimbies))
+   (sleep-for 1)))
 
 (defun smalldisplay-mpv-id ()
   (with-temp-buffer
@@ -129,19 +134,14 @@
 
 (defun smalldisplay-loop-potato ()
   (message (format-time-string "%H:%M:%S Making"))
-  (let ((timestamp nil)
-	new mpv new-mpv) 
+  (let (mpv new-mpv) 
     (loop for i from 0
 	  when (or
-		(not (equal (setq new (file-attribute-modification-time
-				       (file-attributes
-					smalldisplay-current-track)))
-			    timestamp))
+		(smalldisplay-track-changed-p)
 		(not (equal (setq new-mpv (smalldisplay-mpv-id)) mpv))
 		(zerop (mod i 30)))
 	  do (smalldisplay-potato)
-	  (setq timestamp new
-		mpv new-mpv)
+	  (setq mpv new-mpv)
 	  do (sleep-for 1))))
 
 (defun smalldisplay-stories ()
@@ -163,7 +163,7 @@
   (with-temp-buffer
     (set-buffer-multibyte nil)
     (insert (smalldisplay '(1280 . 800)
-			  `((top-left 0 150 ,(smalldisplay--track)))
+			  `((top-left -30 260 ,(smalldisplay--track)))
 			  (expand-file-name
 			   "sleeve.jpg" (file-name-directory
 					 (smalldisplay--current)))))
@@ -179,7 +179,7 @@
     (insert (smalldisplay-potato-1
 	     '(1024 . 600)
 	     `((top-right 0 70 ,(list (format-time-string "%H:%M")
-				      (car (smalldisplay--temp))))
+				      (cadr (smalldisplay--temp))))
 	       (bottom-right 520 20 ,(smalldisplay--track)))
 	     (smalldisplay-smooth
 	      (loop for point in (smalldisplay-rain)
