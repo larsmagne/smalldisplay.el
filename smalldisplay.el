@@ -128,6 +128,7 @@
     (buffer-string)))
 
 (defun smalldisplay-loop-potato ()
+  (message (format-time-string "%H:%M:%S Making"))
   (let ((timestamp nil)
 	new mpv new-mpv) 
     (loop for i from 0
