@@ -68,7 +68,7 @@
 			   nil "svg:-" "png:-")
       (buffer-string))))
 
-(defun svg-multi-line-text (svg texts &rest args)
+(defun smalldisplay-svg-multi-line-text (svg texts &rest args)
   "Add TEXT to SVG."
   (let ((a (svg--arguments svg args)))
     (svg--append
@@ -89,9 +89,10 @@
   (let ((track (jukebox-tokenize-path (smalldisplay--current))))
     ;; If the album and song name is the same, then drop the track
     ;; name.
-    (if (equal (nth 1 track)
-	       (nth 2 track))
-	(list (car track) (cadr track))
+    (if (or (equal (nth 1 track) (nth 2 track))
+	    (and (> (length (nth 1 track)) 6)
+		 (zerop (search (nth 1 track) (nth 2 track)))))
+	(list (car track) (caddr track))
       track)))
 
 (defvar smalldisplay-current-track "/music/tmp/.amp.current")
@@ -99,19 +100,23 @@
 (defun smalldisplay--current ()
   (with-temp-buffer
     (insert-file-contents smalldisplay-current-track)
-    (buffer-substring (point-min) (1- (point-max)))))
+    (unless (zerop (buffer-size))
+      (buffer-substring (point-min) (1- (point-max))))))
 
 (defvar smalldisplay-current-track-last nil)
 
 (defun smalldisplay-track-changed-p ()
-  (let ((new (list (file-attribute-modification-time
-				       (file-attributes
-					smalldisplay-current-track))
-		   (smalldisplay--current))))
-    (if (equal new smalldisplay-current-track-last)
+  (let ((current (smalldisplay--current)))
+    (if (not current)
 	nil
-      (setq smalldisplay-current-track-last new)
-      t)))  
+      (let ((new (list (file-attribute-modification-time
+			(file-attributes
+			 smalldisplay-current-track))
+		       current)))
+	(if (equal new smalldisplay-current-track-last)
+	    nil
+	  (setq smalldisplay-current-track-last new)
+	  t))))) 
 
 (defun smalldisplay-loop-stories ()
   (loop for i from 0
@@ -209,11 +214,12 @@
 (defun smalldisplay-potato-1 (size texts rain)
   (let ((svg (svg-create (car size) (cdr size)
 			 :xmlns:xlink "http://www.w3.org/1999/xlink")))
-    (svg-path svg
-	      :d (smalldisplay-path rain)
-	      :stroke-width 7
-	      :fill "none"
-	      :stroke "white")
+    (smalldisplay-svg-path
+     svg
+     :d (smalldisplay-path rain)
+     :stroke-width 7
+     :fill "none"
+     :stroke "white")
     (smalldisplay-text svg size texts)
     (with-temp-buffer
       (set-buffer-multibyte nil)
@@ -281,7 +287,7 @@
 	    (car cpe) (cdr cpe)
 	    (car (elt points i)) (cdr (elt points i)))))
 
-(defun svg-path (svg &rest args)
+(defun smalldisplay-svg-path (svg &rest args)
   "Add TEXT to SVG."
   (svg--append
    svg
@@ -302,7 +308,7 @@
 (defun smalldisplay-text (svg size texts)
   (loop for (position y font-size strings) in texts
 	do (loop for stroke in (list (/ font-size 16) 1)
-		 do (svg-multi-line-text
+		 do (smalldisplay-svg-multi-line-text
 		     svg strings
 		     :text-anchor
 		     (if (memq position '(top-right bottom-right))
