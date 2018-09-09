@@ -91,7 +91,7 @@
     ;; name.
     (if (or (equal (nth 1 track) (nth 2 track))
 	    (and (> (length (nth 1 track)) 6)
-		 (zerop (search (nth 1 track) (nth 2 track)))))
+		 (zerop (or (search (nth 1 track) (nth 2 track)) -1))))
 	(list (car track) (caddr track))
       track)))
 
@@ -153,15 +153,20 @@
   (message (format-time-string "%H:%M:%S Making"))
   (with-temp-buffer
     (set-buffer-multibyte nil)
-    (insert (smalldisplay '(800 . 480)
-			  `((bottom-left 310 50 ,(smalldisplay--track))
-			    (top-right 0 50 ,(smalldisplay--temp)))
-			  (expand-file-name
-			   "sleeve.jpg" (file-name-directory
-					 (smalldisplay--current)))))
-    (call-process-region (point-min) (point-max)
-			 "xloadimage" nil nil nil
-			 "-display" ":1" "-onroot" "-gamma" "2" "stdin")))
+    (let ((track (smalldisplay--track)))
+      (insert (smalldisplay '(800 . 480)
+			    `((bottom-left ,(if (= (length track) 3)
+						310
+					      370)
+					   50
+					   ,track)
+			      (top-right 0 50 ,(smalldisplay--temp)))
+			    (expand-file-name
+			     "sleeve.jpg" (file-name-directory
+					   (smalldisplay--current)))))
+      (call-process-region (point-min) (point-max)
+			   "xloadimage" nil nil nil
+			   "-display" ":1" "-onroot" "-gamma" "2" "stdin"))))
 
 (defun smalldisplay-quimbies ()
   (message (format-time-string "%H:%M:%S Making"))
@@ -289,11 +294,7 @@
 
 (defun smalldisplay-svg-path (svg &rest args)
   "Add TEXT to SVG."
-  (svg--append
-   svg
-   (dom-node
-    'path
-    `(,@(svg--arguments svg args)))))
+  (svg--append svg (dom-node 'path `(,@(svg--arguments svg args)))))
 
 (defun smalldisplay-path (points)
   (mapconcat
