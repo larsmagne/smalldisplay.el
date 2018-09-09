@@ -237,6 +237,7 @@
       (call-process-region (point-min) (point-max) "convert"
 			   t (list (current-buffer) nil)
 			   nil "-background" "transparent"
+			   ;;"+antialias"
 			   "svg:-" "png:-")
       (buffer-string))))
 
@@ -311,10 +312,11 @@
 		   (smalldisplay-bezier i points)))
    " "))
 
-(defun smalldisplay-text (svg size texts)
+(defun smalldisplay-text (svg size texts &rest args)
   (loop for (position y font-size strings) in texts
 	do (loop for stroke in (list (max (/ font-size 16) 2) 1)
-		 do (smalldisplay-svg-multi-line-text
+		 do (apply
+		     'smalldisplay-svg-multi-line-text
 		     svg strings
 		     :text-anchor
 		     (if (memq position '(top-right bottom-right))
@@ -332,7 +334,51 @@
 		     :stroke-width (format "%dpx" stroke)
 		     :font-weight "bold"
 		     :fill "white"
-		     :font-family "futura"))))
+		     :font-family "futura"
+		     args))))
+
+(defun smalldisplay-list-windows ()
+  (let* ((x (xcb:connect))
+	 (root (slot-value (car (slot-value (xcb:get-setup x) 'roots))
+                           'root))
+	 (tree (xcb:+request-unchecked+reply x
+                   (make-instance 'xcb:QueryTree
+                                  :window root)))
+	 (children (slot-value tree 'children)))
+    (prog1
+	(loop for child in children
+	      for atom = (loop for atom in (slot-value
+					    (xcb:+request-unchecked+reply x
+						(make-instance 'xcb:ListProperties
+							       :window i))
+					    'atoms)
+			       for type = (slot-value
+					   (xcb:+request-unchecked+reply x
+					       (make-instance 'xcb:GetAtomName
+							      :atom atom))
+					   'name)
+			       when (equal type "WM_CLASS")
+			       return atom)
+	      when atom
+	      collect (cons
+		       child
+		       (coerce
+		       (slot-value
+			(xcb:+request-unchecked+reply x
+			    (make-instance 'xcb:GetProperty
+					   :delete 0
+					   :window child
+					   :type xcb:Atom:STRING
+					   :property xcb:Atom:WM_CLASS ;;child
+					   :long-length 256
+					   :long-offset 0))
+			'value)
+		       'string)))
+      (xcb:disconnect x))))
+						     
+
+      
+
 
 (provide 'smalldisplay)
 
