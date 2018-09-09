@@ -28,6 +28,7 @@
 (require 'cl)
 (require 'svg)
 (require 'jukebox)
+(require 'xcb)
 
 (defun smalldisplay-image-size (file)
   (with-temp-buffer
@@ -137,10 +138,10 @@
    (sleep-for 1)))
 
 (defun smalldisplay-mpv-id ()
-  (with-temp-buffer
-    (call-process "~/src/flit/grepwindow" nil (current-buffer) nil
-		  "x11")
-    (buffer-string)))
+  (loop for (id . name) in (smalldisplay-list-windows)
+	when (and name
+		  (string-match "mpv" name))
+	return id))
 
 (defun smalldisplay-loop-potato ()
   (message (format-time-string "%H:%M:%S Making"))
@@ -338,7 +339,7 @@
 		     args))))
 
 (defun smalldisplay-list-windows ()
-  (let* ((x (xcb:connect))
+  (let* ((x (xcb:connect ":1"))
 	 (root (slot-value (car (slot-value (xcb:get-setup x) 'roots))
                            'root))
 	 (tree (xcb:+request-unchecked+reply x
@@ -347,38 +348,24 @@
 	 (children (slot-value tree 'children)))
     (prog1
 	(loop for child in children
-	      for atom = (loop for atom in (slot-value
-					    (xcb:+request-unchecked+reply x
-						(make-instance 'xcb:ListProperties
-							       :window i))
-					    'atoms)
-			       for type = (slot-value
-					   (xcb:+request-unchecked+reply x
-					       (make-instance 'xcb:GetAtomName
-							      :atom atom))
-					   'name)
-			       when (equal type "WM_CLASS")
-			       return atom)
-	      when atom
 	      collect (cons
 		       child
-		       (coerce
-		       (slot-value
-			(xcb:+request-unchecked+reply x
-			    (make-instance 'xcb:GetProperty
-					   :delete 0
-					   :window child
-					   :type xcb:Atom:STRING
-					   :property xcb:Atom:WM_CLASS ;;child
-					   :long-length 256
-					   :long-offset 0))
-			'value)
-		       'string)))
+		       (cadr
+			(split-string
+			 (coerce
+			  (slot-value
+			   (xcb:+request-unchecked+reply x
+			       (make-instance 'xcb:GetProperty
+					      :delete 0
+					      :window child
+					      :type xcb:Atom:STRING
+					      :property xcb:Atom:WM_CLASS
+					      :long-length 256
+					      :long-offset 0))
+			   'value)
+			  'string)
+			 (string 0)))))
       (xcb:disconnect x))))
-						     
-
-      
-
 
 (provide 'smalldisplay)
 
