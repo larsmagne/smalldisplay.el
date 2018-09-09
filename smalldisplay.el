@@ -106,8 +106,7 @@
 (defun smalldisplay--current ()
   (with-temp-buffer
     (insert-file-contents smalldisplay-current-track)
-    (unless (zerop (buffer-size))
-      (buffer-substring (point-min) (1- (point-max))))))
+    (buffer-substring (point-min) (1- (point-max)))))
 
 (defvar smalldisplay-current-track-last nil)
 
@@ -314,7 +313,7 @@
 
 (defun smalldisplay-text (svg size texts)
   (loop for (position y font-size strings) in texts
-	do (loop for stroke in (list (/ font-size 16) 1)
+	do (loop for stroke in (list (max (/ font-size 16) 2) 1)
 		 do (smalldisplay-svg-multi-line-text
 		     svg strings
 		     :text-anchor
