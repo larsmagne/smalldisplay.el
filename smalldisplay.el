@@ -344,10 +344,9 @@
                            'root))
 	 (tree (xcb:+request-unchecked+reply x
                    (make-instance 'xcb:QueryTree
-                                  :window root)))
-	 (children (slot-value tree 'children)))
+                                  :window root))))
     (prog1
-	(loop for child in children
+	(loop for child in (slot-value tree 'children)
 	      collect (cons
 		       child
 		       (cadr
