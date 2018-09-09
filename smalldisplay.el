@@ -354,8 +354,8 @@
 			;; characters) that contains two data points:
 			;; First the window class (as the property
 			;; name says), and then the name of the
-			;; window.  The two parts are separated by a
-			;; NUL character.
+			;; window.  The two parts are terminated by a
+			;; NUL character each.
 			(split-string
 			 (coerce
 			  (slot-value
