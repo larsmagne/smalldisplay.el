@@ -351,6 +351,12 @@
 	      collect (cons
 		       child
 		       (cadr
+			;; We get back a string (well, vector of
+			;; characters) that contains two data points:
+			;; First the window class (as the property
+			;; name says), and then the name of the
+			;; window.  The two parts are separated by a
+			;; NUL character.
 			(split-string
 			 (coerce
 			  (slot-value
