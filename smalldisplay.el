@@ -96,11 +96,15 @@
   (let ((track (jukebox-tokenize-path (smalldisplay--current))))
     ;; If the album and song name is the same, then drop the track
     ;; name.
-    (if (or (equal (nth 1 track) (nth 2 track))
-	    (and (> (length (nth 1 track)) 6)
-		 (zerop (or (search (nth 1 track) (nth 2 track)) -1))))
-	(list (car track) (caddr track))
-      track)))
+    (cond
+     ((or (equal (nth 1 track) (nth 2 track))
+	  (and (> (length (nth 1 track)) 6)
+	       (zerop (or (search (nth 1 track) (nth 2 track)) -1))))
+      (list (car track) (caddr track)))
+     ((equal (nth 0 track) (nth 1 track))
+      (list (car track) (nth 2 track)))
+     (t
+      track))))
 
 (defvar smalldisplay-current-track "/music/tmp/.amp.current")
 
