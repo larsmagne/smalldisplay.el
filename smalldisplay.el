@@ -193,7 +193,7 @@
 
 (defvar smalldisplay-displayer nil)
 
-(defun smalldisplay-potato ()
+(defun smalldisplay-potato (&optional debug)
   (with-temp-buffer
     (set-buffer-multibyte nil)
     (insert (smalldisplay-potato-1
@@ -206,13 +206,16 @@
 		    collect (cons (* (car point) (/ 1024.0 24))
 				  (- 600 (* (cdr point) 130)))))))
     (write-region (point-min) (point-max) "/tmp/a.png")
-    (let ((prev smalldisplay-displayer))
-      (setq smalldisplay-displayer
-	    (start-process "qiv" nil "/usr/src/qiv-2.2.4/qiv"
-			   "-p" "--display" ":1" "/tmp/a.png"))
-      (when prev
-	(sleep-for 0.1)
-	(delete-process prev)))))
+    (if debug
+	(call-process-region (point-min) (point-max)
+			     "display" nil nil nil "-")
+      (let ((prev smalldisplay-displayer))
+	(setq smalldisplay-displayer
+	      (start-process "qiv" nil "/usr/src/qiv-2.2.4/qiv"
+			     "-p" "--display" ":1" "/tmp/a.png"))
+	(when prev
+	  (sleep-for 0.1)
+	  (delete-process prev))))))
 
 (defun smalldisplay-smooth (points)
   (let ((acc 0)
@@ -239,9 +242,11 @@
     (with-temp-buffer
       (set-buffer-multibyte nil)
       (svg-print svg)
-      (call-process-region (point-min) (point-max) "convert"
+      (call-process-region (point-min) (point-max)
+			   "convert"
 			   t (list (current-buffer) nil)
-			   nil "-background" "transparent"
+			   nil
+			   "-background" "transparent"
 			   ;;"+antialias"
 			   "svg:-" "png:-")
       (buffer-string))))
@@ -325,8 +330,8 @@
 		     svg strings
 		     :text-anchor
 		     (if (memq position '(top-right bottom-right))
-			 "right"
-		       "left")
+			 "end"
+		       "start")
 		     :x (if (memq position '(top-right bottom-right))
 			    (- (car size) 20)
 			  20)
