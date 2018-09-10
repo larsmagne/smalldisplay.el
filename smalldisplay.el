@@ -200,11 +200,11 @@
 	     '(1024 . 600)
 	     `((top-right 0 70 ,(list (format-time-string "%H:%M")
 				      (cadr (smalldisplay--temp))))
-	       (bottom-right 520 20 ,(smalldisplay--track)))
+	       (bottom-right 520 20 ,(smalldisplay--track) t))
 	     (smalldisplay-smooth
 	      (loop for point in (smalldisplay-rain)
 		    collect (cons (* (car point) (/ 1024.0 24))
-				  (- 600 (* (cdr point) 130)))))))
+				  (- 603 (* (cdr point) 130)))))))
     (write-region (point-min) (point-max) "/tmp/a.png")
     (if debug
 	(call-process-region (point-min) (point-max)
@@ -329,29 +329,46 @@
    " "))
 
 (defun smalldisplay-text (svg size texts &rest args)
-  (loop for (position y font-size strings) in texts
-	do (loop for stroke in (list (max (/ font-size 16) 2) 1)
-		 do (apply
-		     'smalldisplay-svg-multi-line-text
-		     svg strings
-		     :text-anchor
-		     (if (memq position '(top-right bottom-right))
-			 "end"
-		       "start")
-		     :x (if (memq position '(top-right bottom-right))
-			    (- (car size) 20)
-			  20)
-		     :y (or y
-			    (if (memq position '(bottom-left bottom-right))
-				(- (cdr size) (* (length texts) 100) 20)
-			      20))
-		     :font-size font-size
-		     :stroke "black"
-		     :stroke-width (format "%dpx" stroke)
-		     :font-weight "bold"
-		     :fill "white"
-		     :font-family "futura"
-		     args))))
+  (loop for (position y font-size strings . no-border) in texts
+	do (if no-border
+	       (apply
+		'smalldisplay-svg-multi-line-text
+		svg strings
+		:text-anchor
+		(if (memq position '(top-right bottom-right))
+		    "end"
+		  "start")
+		:x (if (memq position '(top-right bottom-right))
+		       (- (car size) 20)
+		     20)
+		:y y
+		:font-size font-size
+		:font-weight "bold"
+		:fill "white"
+		:font-family "futura"
+		args)
+	     (loop for stroke in (list (max (/ font-size 16) 2) 1)
+		   do (apply
+		       'smalldisplay-svg-multi-line-text
+		       svg strings
+		       :text-anchor
+		       (if (memq position '(top-right bottom-right))
+			   "end"
+			 "start")
+		       :x (if (memq position '(top-right bottom-right))
+			      (- (car size) 20)
+			    20)
+		       :y (or y
+			      (if (memq position '(bottom-left bottom-right))
+				  (- (cdr size) (* (length texts) 100) 20)
+				20))
+		       :font-size font-size
+		       :stroke "black"
+		       :stroke-width (format "%dpx" stroke)
+		       :font-weight "bold"
+		       :fill "white"
+		       :font-family "futura"
+		       args)))))
 
 (defun smalldisplay-list-windows ()
   (let* ((x (xcb:connect ":1"))
