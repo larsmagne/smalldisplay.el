@@ -208,7 +208,7 @@
     (write-region (point-min) (point-max) "/tmp/a.png")
     (if debug
 	(call-process-region (point-min) (point-max)
-			     "display" nil nil nil "-")
+			     "feh" nil nil nil "-ZF" "/tmp/a.png")
       (let ((prev smalldisplay-displayer))
 	(setq smalldisplay-displayer
 	      (start-process "qiv" nil "/usr/src/qiv-2.2.4/qiv"
