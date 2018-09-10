@@ -242,13 +242,19 @@
     (with-temp-buffer
       (set-buffer-multibyte nil)
       (svg-print svg)
-      (call-process-region (point-min) (point-max)
-			   "convert"
-			   t (list (current-buffer) nil)
-			   nil
-			   "-background" "transparent"
-			   ;;"+antialias"
-			   "svg:-" "png:-")
+      (if t
+	  (call-process-region (point-min) (point-max)
+			       "convert"
+			       t (list (current-buffer) nil)
+			       nil
+			       "-background" "transparent"
+			       ;;"+antialias"
+			       "svg:-" "png:-")
+	(write-region (point-min) (point-max) "/tmp/b.svg")
+	(call-process "inkscape" nil nil nil "-z" "/tmp/b.svg"
+		      "-e" "/tmp/b.png")
+	(erase-buffer)
+	(insert-file-contents-literally "/tmp/b.png"))
       (buffer-string))))
 
 (defvar smalldisplay-rain nil)
