@@ -116,12 +116,14 @@
 (defvar smalldisplay-current-track-last nil)
 
 (defun smalldisplay-track-changed-p ()
-  (let ((current (smalldisplay--current)))
+  (let ((current (ignore-errors
+		   (smalldisplay--current))))
     (if (not current)
 	nil
-      (let ((new (list (file-attribute-modification-time
-			(file-attributes
-			 smalldisplay-current-track))
+      (let ((new (list (ignore-errors
+			 (file-attribute-modification-time
+			  (file-attributes
+			   smalldisplay-current-track)))
 		       current)))
 	(if (equal new smalldisplay-current-track-last)
 	    nil
@@ -132,13 +134,17 @@
   (loop for i from 0
 	when (or (smalldisplay-track-changed-p)
 		 (zerop (mod i 60)))
-	do (smalldisplay-stories)
+	do (condition-case err
+	       (smalldisplay-stories)
+	     (error (sleep-for 10)))
 	do (sleep-for 1)))
 
 (defun smalldisplay-loop-quimbies ()
   (loop
    (when (smalldisplay-track-changed-p)
-     (smalldisplay-quimbies))
+     (condition-case err
+	 (smalldisplay-quimbies)
+       (error (sleep-for 10))))
    (sleep-for 1)))
 
 (defun smalldisplay-mpv-id ()
@@ -155,7 +161,10 @@
 		(smalldisplay-track-changed-p)
 		(not (equal (setq new-mpv (smalldisplay-mpv-id)) mpv))
 		(zerop (mod i 30)))
-	  do (smalldisplay-potato)
+	  do (condition-case err
+		 (smalldisplay-potato)
+	       (error (message "%s" err)
+		      (sleep-for 10)))
 	  (setq mpv new-mpv)
 	  do (sleep-for 1))))
 
@@ -197,14 +206,14 @@
   (with-temp-buffer
     (set-buffer-multibyte nil)
     (insert (smalldisplay-potato-1
-	     '(1024 . 600)
-	     `((top-right 0 70 ,(list (format-time-string "%H:%M")
+	     '(1280 . 800)
+	     `((top-right 0 80 ,(list (format-time-string "%H:%M")
 				      (cadr (smalldisplay--temp))))
-	       (bottom-right 520 20 ,(smalldisplay--track) t))
+	       (bottom-right 690 30 ,(smalldisplay--track)))
 	     (smalldisplay-smooth
 	      (loop for point in (smalldisplay-rain)
-		    collect (cons (* (car point) (/ 1024.0 24))
-				  (- 603 (* (cdr point) 130)))))))
+		    collect (cons (* (car point) (/ 1280.0 24))
+				  (- 803 (* (cdr point) 130)))))))
     (write-region (point-min) (point-max) "/tmp/a.png")
     (if debug
 	(call-process-region (point-min) (point-max)
@@ -217,21 +226,12 @@
 	  (sleep-for 0.1)
 	  (delete-process prev))))))
 
-(defun smalldisplay-smooth (points)
-  (let ((acc 0)
-	(length 4))
-    (dotimes (i length)
-      (incf acc (cdr (elt points i))))
-    (loop for i from length upto (+ 24 length)
-	  collect (cons (car (elt points (- i (/ length 2))))
-			(prog2
-			    (incf acc (cdr (elt points i)))
-			    (/ (* acc 1.0) (1+ length))
-			  (decf acc (cdr (elt points (- i length)))))))))
-
 (defun smalldisplay-potato-1 (size texts rain)
   (let ((svg (svg-create (car size) (cdr size)
 			 :xmlns:xlink "http://www.w3.org/1999/xlink")))
+    (when nil
+    (svg-rectangle svg 0 0 (car size) (cdr size)
+		   :fill "#000001"))
     (smalldisplay-svg-path
      svg
      :d (smalldisplay-path rain)
@@ -247,6 +247,7 @@
 			       "convert"
 			       t (list (current-buffer) nil)
 			       nil
+			       ;;"-transparent" "#000001"
 			       "-background" "transparent"
 			       ;;"+antialias"
 			       "svg:-" "png:-")
@@ -256,6 +257,19 @@
 	(erase-buffer)
 	(insert-file-contents-literally "/tmp/b.png"))
       (buffer-string))))
+
+(defun smalldisplay-smooth (points)
+  (let ((acc 0)
+	(length 4))
+    (dotimes (i length)
+      (incf acc (cdr (elt points i))))
+    (loop for i from length upto (+ 24 length)
+	  collect (cons (car (elt points (- i (/ length 2))))
+			(prog2
+			    (incf acc (cdr (elt points i)))
+			    (/ (* acc 1.0) (1+ length))
+			  (decf acc (cdr (elt points (- i length)))))))))
+
 
 (defvar smalldisplay-rain nil)
 (defvar smalldisplay-rain-count 0)
