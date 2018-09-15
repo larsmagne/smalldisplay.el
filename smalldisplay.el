@@ -131,21 +131,19 @@
 	  t))))) 
 
 (defun smalldisplay-loop-stories ()
-  (loop for i from 0
-	when (or (smalldisplay-track-changed-p)
-		 (zerop (mod i 60)))
-	do (condition-case err
-	       (smalldisplay-stories)
-	     (error (sleep-for 10)))
-	do (sleep-for 1)))
+  (smalldisplay-loop
+   (loop for i from 0
+	 when (or (smalldisplay-track-changed-p)
+		  (zerop (mod i 60)))
+	 do (smalldisplay-stories)
+	 do (sleep-for 1))))
 
 (defun smalldisplay-loop-quimbies ()
-  (loop
-   (when (smalldisplay-track-changed-p)
-     (condition-case err
-	 (smalldisplay-quimbies)
-       (error (sleep-for 10))))
-   (sleep-for 1)))
+  (smalldisplay-loop
+   (loop
+    (when (smalldisplay-track-changed-p)
+      (smalldisplay-quimbies))
+    (sleep-for 1))))
 
 (defun smalldisplay-mpv-id ()
   (loop for (id . name) in (smalldisplay-list-windows)
@@ -153,20 +151,24 @@
 		  (string-match "mpv" name))
 	return id))
 
+(defmacro smalldisplay-loop (&body body)
+  `(loop
+    (condition-case err
+	,@body
+      (error (message "%s" err)
+	     (sleep-for 10)))))
+
 (defun smalldisplay-loop-potato ()
-  (message (format-time-string "%H:%M:%S Making"))
-  (let (mpv new-mpv) 
-    (loop for i from 0
-	  when (or
-		(smalldisplay-track-changed-p)
-		(not (equal (setq new-mpv (smalldisplay-mpv-id)) mpv))
-		(zerop (mod i 30)))
-	  do (condition-case err
-		 (smalldisplay-potato)
-	       (error (message "%s" err)
-		      (sleep-for 10)))
-	  (setq mpv new-mpv)
-	  do (sleep-for 1))))
+  (let (mpv new-mpv)
+    (smalldisplay-loop
+     (loop for i from 0
+	   when (or
+		 (smalldisplay-track-changed-p)
+		 (not (equal (setq new-mpv (smalldisplay-mpv-id)) mpv))
+		 (zerop (mod i 30)))
+	   do (smalldisplay-potato)
+	   (setq mpv new-mpv)
+	   do (sleep-for 1)))))
 
 (defun smalldisplay-stories ()
   (message (format-time-string "%H:%M:%S Making"))
