@@ -130,6 +130,14 @@
 	  (setq smalldisplay-current-track-last new)
 	  t))))) 
 
+(defmacro smalldisplay-loop (&rest body)
+  `(loop
+    (condition-case err
+	(progn
+	  ,@body)
+      (error (message "%s" err)
+	     (sleep-for 10)))))
+
 (defun smalldisplay-loop-stories ()
   (smalldisplay-loop
    (loop for i from 0
@@ -150,13 +158,6 @@
 	when (and name
 		  (string-match "mpv" name))
 	return id))
-
-(defmacro smalldisplay-loop (&body body)
-  `(loop
-    (condition-case err
-	,@body
-      (error (message "%s" err)
-	     (sleep-for 10)))))
 
 (defun smalldisplay-loop-potato ()
   (let (mpv new-mpv)
