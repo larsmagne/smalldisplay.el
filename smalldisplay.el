@@ -387,8 +387,8 @@
 		       :font-family "futura"
 		       args)))))
 
-(defun smalldisplay-list-windows ()
-  (let* ((x (xcb:connect ":1"))
+(defun smalldisplay-list-windows (&optional display)
+  (let* ((x (xcb:connect (or display ":1")))
 	 (root (slot-value (car (slot-value (xcb:get-setup x) 'roots))
                            'root))
 	 (tree (xcb:+request-unchecked+reply x
