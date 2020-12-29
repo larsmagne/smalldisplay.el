@@ -89,8 +89,9 @@
 
 (defun smalldisplay--temp ()
   (with-temp-buffer
-    (insert-file-contents "~/jukebox/tex/tempdata.data")
-    (split-string (buffer-string) "[\\\\\n]" t)))
+    (call-process "get-temperatures" nil t)
+    (loop for temp in (split-string (buffer-string) nil t)
+	  collect (format "%.1f°C" (string-to-number temp)))))
 
 (defun smalldisplay--track ()
   (let ((track (jukebox-tokenize-path (smalldisplay--current))))
@@ -147,11 +148,14 @@
 	 do (sleep-for 1))))
 
 (defun smalldisplay-loop-quimbies ()
+  (let ((i 0))
   (smalldisplay-loop
    (loop
     (when (smalldisplay-track-changed-p)
       (smalldisplay-quimbies))
-    (sleep-for 1))))
+    (when (zerop (mod (incf i) 100))
+      (smalldisplay-frame))
+    (sleep-for 1)))))
 
 (defun smalldisplay-mpv-id ()
   (loop for (id . name) in (smalldisplay-list-windows)
@@ -189,6 +193,60 @@
       (call-process-region (point-min) (point-max)
 			   "xloadimage" nil nil nil
 			   "-display" ":1" "-onroot" "-gamma" "2" "stdin"))))
+
+(defun smalldisplay-frame ()
+  (with-temp-buffer
+    (set-buffer-multibyte nil)
+    (let ((files (directory-files-recursively
+		  "/var/tmp/screenshots" "[.]jpg\\'")))
+      (insert-file-contents-literally
+       (nth (random (length files)) files)
+       ;(expand-file-name "sleeve.jpg" (file-name-directory (smalldisplay--current)))
+       ))
+    (call-process-region (point-min) (point-max)
+			 "convert"
+			 t (current-buffer) nil
+			 "jpg:-"
+			 "-trim" "-fuzz" "4%"
+			 "-level" "0%,80%"
+			 "-contrast-stretch" "0.0x5.0%"
+			 "-auto-level"
+			 "/tmp/sleeve-stretch.jpg")
+    (let ((track (smalldisplay--track)))
+      (insert (smalldisplay '(1200 . 825)
+			    `((bottom-right 580 200
+					    ,(cdr (smalldisplay--temp)))
+			      (top-right 0 200
+					,(list (format-time-string "%H:%M"))))
+			    "/tmp/sleeve-stretch.jpg"))
+      (write-region (point-min) (point-max) "/tmp/a.png")
+      (call-process-region (point-min) (point-max)
+			   "convert"
+			   t (current-buffer) nil
+			   "png:-"
+			   "-rotate" "180"
+			   ;;"-contrast-stretch" "0.0x5.0%"
+			   ;;"-auto-level"
+			   ;;"-brightness-contrast" "20x1"
+			   "-depth" "4"
+			   "-colorspace" "gray"
+			   "pgm:-")
+      (write-region (point-min) (point-max) "/tmp/a.pgm")
+      (goto-char (point-min))
+      (forward-line 3)
+      ;; Remove the PGM header.
+      (delete-region (point-min) (point))
+      (while (not (eobp))
+	(insert (+ (* (char-after) 16)
+		   (* (char-after (1+ (point))) 1)))
+	(delete-region (point) (+ (point) 2)))
+      (call-process-region (point-min) (point-max)
+			   "pigz"
+			   t (current-buffer) nil
+			   "-zc")
+      (write-region (point-min) (point-max) "~/tmp/frame/image.rawz"))))
+
+
 
 (defun smalldisplay-quimbies ()
   (message (format-time-string "%H:%M:%S Making"))
