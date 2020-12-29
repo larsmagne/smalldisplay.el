@@ -215,9 +215,7 @@
     (let ((track (smalldisplay--track)))
       (insert (smalldisplay '(1200 . 825)
 			    `((bottom-right 580 200
-					    ,(cdr (smalldisplay--temp)))
-			      (top-right 0 200
-					,(list (format-time-string "%H:%M"))))
+					    ,(cdr (smalldisplay--temp))))
 			    "/tmp/sleeve-stretch.jpg"))
       (write-region (point-min) (point-max) "/tmp/a.png")
       (call-process-region (point-min) (point-max)
