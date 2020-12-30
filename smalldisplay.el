@@ -201,7 +201,7 @@
 		  "/var/tmp/screenshots" "[.]jpg\\'")))
       (insert-file-contents-literally
        (nth (random (length files)) files)
-       ;;(nth 1000 files)
+       ;;(nth 1500 files)
        ;;(expand-file-name "sleeve.jpg" (file-name-directory (smalldisplay--current)))
        ))
     (call-process-region (point-min) (point-max)
@@ -209,10 +209,12 @@
 			 t (current-buffer) nil
 			 "jpg:-"
 			 "-trim" "-fuzz" "4%"
+			 "-resize" "1200x825^"
+			 "-gravity" "Center"
+			 "-extent" "1200x825"
 			 "-level" "0%,80%"
 			 "-contrast-stretch" "0.0x5.0%"
 			 "-colorspace" "gray"
-			 "+dither"
 			 "-noise" "5" "-median" "5" "-unsharp" "5"
 			 "-posterize" "16"
 			 ;;"-auto-level"
@@ -228,11 +230,7 @@
 			   t (current-buffer) nil
 			   "png:-"
 			   "-rotate" "180"
-			   ;;"-contrast-stretch" "0.0x5.0%"
-			   ;;"-auto-level"
-			   ;;"-brightness-contrast" "20x1"
 			   "-depth" "4"
-			   "-colorspace" "gray"
 			   "pgm:-")
       (write-region (point-min) (point-max) "/tmp/a.pgm")
       (goto-char (point-min))
