@@ -201,7 +201,8 @@
 		  "/var/tmp/screenshots" "[.]jpg\\'")))
       (insert-file-contents-literally
        (nth (random (length files)) files)
-       ;(expand-file-name "sleeve.jpg" (file-name-directory (smalldisplay--current)))
+       ;;(nth 1000 files)
+       ;;(expand-file-name "sleeve.jpg" (file-name-directory (smalldisplay--current)))
        ))
     (call-process-region (point-min) (point-max)
 			 "convert"
@@ -210,7 +211,11 @@
 			 "-trim" "-fuzz" "4%"
 			 "-level" "0%,80%"
 			 "-contrast-stretch" "0.0x5.0%"
-			 "-auto-level"
+			 "-colorspace" "gray"
+			 "+dither"
+			 "-noise" "5" "-median" "5" "-unsharp" "5"
+			 "-posterize" "16"
+			 ;;"-auto-level"
 			 "/tmp/sleeve-stretch.jpg")
     (let ((track (smalldisplay--track)))
       (insert (smalldisplay '(1200 . 825)
@@ -235,8 +240,8 @@
       ;; Remove the PGM header.
       (delete-region (point-min) (point))
       (while (not (eobp))
-	(insert (+ (* (char-after) 16)
-		   (* (char-after (1+ (point))) 1)))
+	(insert (+ (* (char-after) 1)
+		   (* (char-after (1+ (point))) 16)))
 	(delete-region (point) (+ (point) 2)))
       (call-process-region (point-min) (point-max)
 			   "pigz"
