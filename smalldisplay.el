@@ -194,42 +194,54 @@
 			   "xloadimage" nil nil nil
 			   "-display" ":1" "-onroot" "-gamma" "2" "stdin"))))
 
+(require 'seq)
+
 (defun smalldisplay-frame ()
   (with-temp-buffer
     (set-buffer-multibyte nil)
-    (let ((files (directory-files-recursively
-		  "/var/tmp/screenshots" "[.]jpg\\'")))
-      (insert-file-contents-literally
-       (nth (random (length files)) files)
-       ;;(nth 1500 files)
-       ;;(expand-file-name "sleeve.jpg" (file-name-directory (smalldisplay--current)))
-       ))
+    (let* ((files (seq-remove
+		  (lambda (file)
+		    (string-match "[0-9]+x[0-9]+\\|scaled" file))
+		  (directory-files-recursively
+		   "/var/tmp/uploads" "shot.*[.]jpg\\'")))
+	   (file (nth (random (length files)) files)
+		 ;;(nth 1300 files)
+		 ))
+      (call-process "convert" nil nil nil
+		    "-trim" "-fuzz" "10%"
+		    file "/tmp/trim.jpg")
+      (call-process "sharp" nil nil nil
+		    "-m" "1" "-f" "10"
+		    "/tmp/trim.jpg" "/tmp/sharp.jpg"))
+    (insert-file-contents-literally "/tmp/sharp.jpg")
     (call-process-region (point-min) (point-max)
 			 "convert"
 			 t (current-buffer) nil
 			 "jpg:-"
-			 "-trim" "-fuzz" "4%"
 			 "-resize" "1200x825^"
 			 "-gravity" "Center"
 			 "-extent" "1200x825"
 			 "-level" "0%,80%"
 			 "-contrast-stretch" "0.0x5.0%"
 			 "-colorspace" "gray"
-			 "-noise" "5" "-median" "5" "-unsharp" "5"
-			 "-posterize" "16"
+			 ;;"-noise" "5" "-median" "5" "-unsharp" "5"
+			 ;;"-posterize" "16"
 			 ;;"-auto-level"
 			 "/tmp/sleeve-stretch.jpg")
     (let ((track (smalldisplay--track)))
       (insert (smalldisplay '(1200 . 825)
-			    `((bottom-right 580 200
-					    ,(cdr (smalldisplay--temp))))
+			    `((bottom-right
+			       600 200
+			       ,(list (string-remove-suffix
+				       "C"
+				       (cadr (smalldisplay--temp))))))
 			    "/tmp/sleeve-stretch.jpg"))
       (write-region (point-min) (point-max) "/tmp/a.png")
       (call-process-region (point-min) (point-max)
 			   "convert"
 			   t (current-buffer) nil
 			   "png:-"
-			   "-rotate" "180"
+			   ;;"-rotate" "180"
 			   "-depth" "4"
 			   "pgm:-")
       (write-region (point-min) (point-max) "/tmp/a.pgm")
@@ -245,7 +257,9 @@
 			   "pigz"
 			   t (current-buffer) nil
 			   "-zc")
-      (write-region (point-min) (point-max) "~/tmp/frame/image.rawz"))))
+      (write-region (point-min) (point-max) "~/tmp/frame/image-temp.rawz")
+      (rename-file "~/tmp/frame/image-temp.rawz"
+		   "~/tmp/frame/image.rawz" t))))
 
 
 
