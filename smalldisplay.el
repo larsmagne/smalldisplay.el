@@ -90,8 +90,8 @@
 (defun smalldisplay--temp ()
   (with-temp-buffer
     (call-process "get-temperatures" nil t)
-    (loop for temp in (split-string (buffer-string) nil t)
-	  collect (format "%.1f°C" (string-to-number temp)))))
+    (cl-loop for temp in (split-string (buffer-string) nil t)
+	     collect (format "%.1f°C" (string-to-number temp)))))
 
 (defun smalldisplay--track ()
   (let ((track (jukebox-tokenize-path (smalldisplay--current))))
@@ -100,7 +100,7 @@
     (cond
      ((or (equal (nth 1 track) (nth 2 track))
 	  (and (> (length (nth 1 track)) 6)
-	       (zerop (or (search (nth 1 track) (nth 2 track)) -1))))
+	       (zerop (or (cl-search (nth 1 track) (nth 2 track)) -1))))
       (list (car track) (caddr track)))
      ((equal (nth 0 track) (nth 1 track))
       (list (car track) (nth 2 track)))
@@ -132,7 +132,7 @@
 	  t))))) 
 
 (defmacro smalldisplay-loop (&rest body)
-  `(loop
+  `(cl-loop
     (condition-case err
 	(progn
 	  ,@body)
@@ -141,20 +141,20 @@
 
 (defun smalldisplay-loop-stories ()
   (smalldisplay-loop
-   (loop for ii from 0 upto most-positive-fixnum
-	 when (or (smalldisplay-track-changed-p)
-		  (zerop (mod ii 60)))
-	 do
-	 (smalldisplay-stories)
-	 (smalldisplay-quimbies)
-	 (when (zerop (mod ii 200))
-	   (smalldisplay-frame))
-	 do (sleep-for 1))))
+   (cl-loop for ii from 0 upto most-positive-fixnum
+	    when (or (smalldisplay-track-changed-p)
+		     (zerop (mod ii 60)))
+	    do
+	    (smalldisplay-stories)
+	    (smalldisplay-quimbies)
+	    (when (zerop (mod ii 200))
+	      (smalldisplay-frame))
+	    do (sleep-for 1))))
 
 (defun smalldisplay-loop-quimbies ()
   (let ((last nil))
     (smalldisplay-loop
-     (loop
+     (cl-loop
       (let ((now (file-attribute-modification-time
 		  (ignore-errors
 		    (file-attributes  "~/tmp/quimbies.file")))))
@@ -165,22 +165,22 @@
       (sleep-for 1)))))
 
 (defun smalldisplay-mpv-id ()
-  (loop for (id . name) in (smalldisplay-list-windows)
-	when (and name
-		  (string-match "mpv" name))
-	return id))
+  (cl-loop for (id . name) in (smalldisplay-list-windows)
+	   when (and name
+		     (string-match "mpv" name))
+	   return id))
 
 (defun smalldisplay-loop-potato ()
   (let (mpv new-mpv)
     (smalldisplay-loop
-     (loop for i from 0
-	   when (or
-		 (smalldisplay-track-changed-p)
-		 (not (equal (setq new-mpv (smalldisplay-mpv-id)) mpv))
-		 (zerop (mod i 30)))
-	   do (smalldisplay-potato)
-	   (setq mpv new-mpv)
-	   do (sleep-for 1)))))
+     (cl-loop for i from 0
+	      when (or
+		    (smalldisplay-track-changed-p)
+		    (not (equal (setq new-mpv (smalldisplay-mpv-id)) mpv))
+		    (zerop (mod i 30)))
+	      do (smalldisplay-potato)
+	      (setq mpv new-mpv)
+	      do (sleep-for 1)))))
 
 (defun smalldisplay-stories ()
   (message (format-time-string "%H:%M:%S Making"))
@@ -300,9 +300,9 @@
 				      (cadr (smalldisplay--temp))))
 	       (bottom-right 690 30 ,(smalldisplay--track)))
 	     (smalldisplay-smooth
-	      (loop for point in (smalldisplay-rain)
-		    collect (cons (* (car point) (/ 1280.0 24))
-				  (- 803 (* (cdr point) 130)))))))
+	      (cl-loop for point in (smalldisplay-rain)
+		       collect (cons (* (car point) (/ 1280.0 24))
+				     (- 803 (* (cdr point) 130)))))))
     (write-region (point-min) (point-max) "/tmp/a.png")
     (if debug
 	(call-process-region (point-min) (point-max)
@@ -353,13 +353,13 @@
   (let ((acc 0)
 	(length 4))
     (dotimes (i length)
-      (incf acc (cdr (elt points i))))
-    (loop for i from length upto (+ 24 length)
-	  collect (cons (car (elt points (- i (/ length 2))))
-			(prog2
-			    (incf acc (cdr (elt points i)))
-			    (/ (* acc 1.0) (1+ length))
-			  (decf acc (cdr (elt points (- i length))))))))))
+      (cl-incf acc (cdr (elt points i))))
+    (cl-loop for i from length upto (+ 24 length)
+	     collect (cons (car (elt points (- i (/ length 2))))
+			   (prog2
+			       (cl-incf acc (cdr (elt points i)))
+			       (/ (* acc 1.0) (1+ length))
+			     (cl-decf acc (cdr (elt points (- i length))))))))))
 
 
 (defvar smalldisplay-rain nil)
@@ -367,7 +367,7 @@
 
 (defun smalldisplay-rain ()
   (if (and smalldisplay-rain
-	   (not (zerop (mod (incf smalldisplay-rain-count) 60))))
+	   (not (zerop (mod (cl-incf smalldisplay-rain-count) 60))))
     ;; Serve the cached rain values usually.
     smalldisplay-rain
     (let ((rain
@@ -377,12 +377,13 @@
 		nil nil 30)
 	     (goto-char (point-min))
 	     (when (search-forward "\n\n" nil t)
-	       (loop for elem in (dom-by-tag
-				  (libxml-parse-xml-region (point) (point-max))
-				  'precipitation)
-		     for i from 0
-		     collect (cons i (string-to-number
-				      (dom-attr elem 'value))))))))
+	       (cl-loop for elem
+			in (dom-by-tag
+			    (libxml-parse-xml-region (point) (point-max))
+			    'precipitation)
+			for i from 0
+			collect (cons i (string-to-number
+					 (dom-attr elem 'value))))))))
       (setq smalldisplay-rain rain)
       rain)))
 
@@ -426,54 +427,54 @@
 (defun smalldisplay-path (points)
   (mapconcat
    #'identity
-   (loop for point in points
-	 for i from 0
-	 collect (if (zerop i)
-		     (format "M %s,%s" (car point) (cdr point))
-		   (smalldisplay-bezier i points)))
+   (cl-loop for point in points
+	    for i from 0
+	    collect (if (zerop i)
+			(format "M %s,%s" (car point) (cdr point))
+		      (smalldisplay-bezier i points)))
    " "))
 
 (defun smalldisplay-text (svg size texts &rest args)
-  (loop for (position y font-size strings . no-border) in texts
-	do (if no-border
-	       (apply
-		'smalldisplay-svg-multi-line-text
-		svg strings
-		:text-anchor
-		(if (memq position '(top-right bottom-right))
-		    "end"
-		  "start")
-		:x (if (memq position '(top-right bottom-right))
-		       (- (car size) 20)
-		     20)
-		:y y
-		:font-size font-size
-		:font-weight "bold"
-		:fill "white"
-		:font-family "futura"
-		args)
-	     (loop for stroke in (list (max (/ font-size 16) 2) 1)
-		   do (apply
-		       'smalldisplay-svg-multi-line-text
-		       svg strings
-		       :text-anchor
-		       (if (memq position '(top-right bottom-right))
-			   "end"
-			 "start")
-		       :x (if (memq position '(top-right bottom-right))
-			      (- (car size) 20)
-			    -60)
-		       :y (or y
-			      (if (memq position '(bottom-left bottom-right))
-				  (- (cdr size) (* (length texts) 100) 20)
-				20))
-		       :font-size font-size
-		       :stroke "black"
-		       :stroke-width (format "%dpx" stroke)
-		       :font-weight "bold"
-		       :fill "white"
-		       :font-family "futura"
-		       args)))))
+  (cl-loop for (position y font-size strings . no-border) in texts
+	   do (if no-border
+		  (apply
+		   'smalldisplay-svg-multi-line-text
+		   svg strings
+		   :text-anchor
+		   (if (memq position '(top-right bottom-right))
+		       "end"
+		     "start")
+		   :x (if (memq position '(top-right bottom-right))
+			  (- (car size) 20)
+			20)
+		   :y y
+		   :font-size font-size
+		   :font-weight "bold"
+		   :fill "white"
+		   :font-family "futura"
+		   args)
+		(cl-loop for stroke in (list (max (/ font-size 16) 2) 1)
+			 do (apply
+			     'smalldisplay-svg-multi-line-text
+			     svg strings
+			     :text-anchor
+			     (if (memq position '(top-right bottom-right))
+				 "end"
+			       "start")
+			     :x (if (memq position '(top-right bottom-right))
+				    (- (car size) 20)
+				  -60)
+			     :y (or y
+				    (if (memq position '(bottom-left bottom-right))
+					(- (cdr size) (* (length texts) 100) 20)
+				      20))
+			     :font-size font-size
+			     :stroke "black"
+			     :stroke-width (format "%dpx" stroke)
+			     :font-weight "bold"
+			     :fill "white"
+			     :font-family "futura"
+			     args)))))
 
 (defun smalldisplay-list-windows (&optional display)
   (let* ((x (xcb:connect (or display ":1")))
@@ -483,30 +484,30 @@
                    (make-instance 'xcb:QueryTree
                                   :window root))))
     (prog1
-	(loop for child in (slot-value tree 'children)
-	      collect (cons
-		       child
-		       (cadr
-			;; We get back a string (well, vector of
-			;; characters) that contains two data points:
-			;; First the window class (as the property
-			;; name says), and then the name of the
-			;; window.  The two parts are terminated by a
-			;; NUL character each.
-			(split-string
-			 (coerce
-			  (slot-value
-			   (xcb:+request-unchecked+reply x
-			       (make-instance 'xcb:GetProperty
-					      :delete 0
-					      :window child
-					      :type xcb:Atom:STRING
-					      :property xcb:Atom:WM_CLASS
-					      :long-length 256
-					      :long-offset 0))
-			   'value)
-			  'string)
-			 (string 0)))))
+	(cl-loop for child in (slot-value tree 'children)
+		 collect (cons
+			  child
+			  (cadr
+			   ;; We get back a string (well, vector of
+			   ;; characters) that contains two data points:
+			   ;; First the window class (as the property
+			   ;; name says), and then the name of the
+			   ;; window.  The two parts are terminated by a
+			   ;; NUL character each.
+			   (split-string
+			    (coerce
+			     (slot-value
+			      (xcb:+request-unchecked+reply x
+							    (make-instance 'xcb:GetProperty
+									   :delete 0
+									   :window child
+									   :type xcb:Atom:STRING
+									   :property xcb:Atom:WM_CLASS
+									   :long-length 256
+									   :long-offset 0))
+			      'value)
+			     'string)
+			    (string 0)))))
       (xcb:disconnect x))))
 
 (provide 'smalldisplay)
