@@ -141,21 +141,28 @@
 
 (defun smalldisplay-loop-stories ()
   (smalldisplay-loop
-   (loop for i from 0
+   (loop for ii from 0 upto most-positive-fixnum
 	 when (or (smalldisplay-track-changed-p)
-		  (zerop (mod i 60)))
-	 do (smalldisplay-stories)
+		  (zerop (mod ii 60)))
+	 do
+	 (smalldisplay-stories)
+	 (smalldisplay-quimbies)
+	 (when (zerop (mod ii 200))
+	   (smalldisplay-frame))
 	 do (sleep-for 1))))
 
 (defun smalldisplay-loop-quimbies ()
-  (let ((i 0))
-  (smalldisplay-loop
-   (loop
-    (when (smalldisplay-track-changed-p)
-      (smalldisplay-quimbies))
-    (when (zerop (mod (incf i) 100))
-      (smalldisplay-frame))
-    (sleep-for 1)))))
+  (let ((last nil))
+    (smalldisplay-loop
+     (loop
+      (let ((now (file-attribute-modification-time
+		  (ignore-errors
+		    (file-attributes  "~/tmp/quimbies.file")))))
+	(when (or (not now)
+		  (not (equal last now)))
+	  (setq last now)
+	  (smalldisplay-display-quimbies)))
+      (sleep-for 1)))))
 
 (defun smalldisplay-mpv-id ()
   (loop for (id . name) in (smalldisplay-list-windows)
@@ -207,6 +214,8 @@
 	   (file (nth (random (length files)) files)
 		 ;;(nth 1300 files)
 		 ))
+      (setq file (expand-file-name
+		  "sleeve.jpg" (file-name-directory (smalldisplay--current))))
       (call-process "convert" nil nil nil
 		    "-trim" "-fuzz" "10%"
 		    file "/tmp/trim.jpg")
@@ -272,9 +281,13 @@
 			  (expand-file-name
 			   "sleeve.jpg" (file-name-directory
 					 (smalldisplay--current)))))
-    (call-process-region (point-min) (point-max)
-			 "xloadimage" nil nil nil
-			 "-display" ":1" "-onroot" "-gamma" "2" "stdin")))
+    (write-region (point-min) (point-max) "~/tmp/quimbies.file.tmp")
+    (rename-file "~/tmp/quimbies.file.tmp" "~/tmp/quimbies.file" t)))
+
+(defun smalldisplay-display-quimbies ()
+  (call-process "xloadimage" nil nil nil
+		"-display" ":1" "-onroot" "-gamma" "2"
+		(expand-file-name "~/tmp/quimbies.file")))
 
 (defvar smalldisplay-displayer nil)
 
@@ -335,6 +348,8 @@
       (buffer-string))))
 
 (defun smalldisplay-smooth (points)
+  (if (not points)
+      nil
   (let ((acc 0)
 	(length 4))
     (dotimes (i length)
@@ -344,7 +359,7 @@
 			(prog2
 			    (incf acc (cdr (elt points i)))
 			    (/ (* acc 1.0) (1+ length))
-			  (decf acc (cdr (elt points (- i length)))))))))
+			  (decf acc (cdr (elt points (- i length))))))))))
 
 
 (defvar smalldisplay-rain nil)
@@ -447,7 +462,7 @@
 			 "start")
 		       :x (if (memq position '(top-right bottom-right))
 			      (- (car size) 20)
-			    20)
+			    -60)
 		       :y (or y
 			      (if (memq position '(bottom-left bottom-right))
 				  (- (cdr size) (* (length texts) 100) 20)
