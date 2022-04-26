@@ -274,13 +274,17 @@
 
 (defun smalldisplay-quimbies ()
   (message (format-time-string "%H:%M:%S Making"))
+  (call-process "convert" nil nil nil
+		"-resize" "1280x" 
+		(expand-file-name
+		 "sleeve.jpg" (file-name-directory
+			       (smalldisplay--current)))
+		"/tmp/quimbies.jpg")
   (with-temp-buffer
     (set-buffer-multibyte nil)
     (insert (smalldisplay '(1280 . 800)
 			  `((top-left -30 260 ,(smalldisplay--track)))
-			  (expand-file-name
-			   "sleeve.jpg" (file-name-directory
-					 (smalldisplay--current)))))
+			  "/tmp/quimbies.jpg"))
     (write-region (point-min) (point-max) "~/tmp/quimbies.file.tmp")
     (rename-file "~/tmp/quimbies.file.tmp" "~/tmp/quimbies.file" t)))
 
