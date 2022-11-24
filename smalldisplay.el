@@ -187,13 +187,13 @@
   (with-temp-buffer
     (set-buffer-multibyte nil)
     (let ((track (smalldisplay--track)))
-      (insert (smalldisplay '(800 . 480)
+      (insert (smalldisplay '(1280 . 800)
 			    `((bottom-left ,(if (= (length track) 3)
-						310
-					      370)
-					   50
+						520
+					      600)
+					   80
 					   ,track)
-			      (top-right 0 50 ,(smalldisplay--temp)))
+			      (top-right 0 80 ,(smalldisplay--temp)))
 			    (expand-file-name
 			     "sleeve.jpg" (file-name-directory
 					   (smalldisplay--current)))))
@@ -377,7 +377,7 @@
     (let ((rain
 	   (with-current-buffer
 	       (url-retrieve-synchronously
-		"http://www.yr.no/stad/Noreg/Oslo/Oslo/Oslo/varsel_time_for_time.xml"
+		"https://api.met.no/weatherapi/locationforecast/2.0/classic?lon=10.744587373145249&lat=59.92675174365245"
 		nil nil 30)
 	     (goto-char (point-min))
 	     (when (search-forward "\n\n" nil t)
@@ -465,9 +465,13 @@
 			     (if (memq position '(top-right bottom-right))
 				 "end"
 			       "start")
-			     :x (if (memq position '(top-right bottom-right))
-				    (- (car size) 20)
+			     :x (cond
+				 ((memq position '(top-right bottom-right))
+				  (- (car size) 20))
+				 ((eq position 'top-left)
 				  -60)
+				 (t
+				  0))
 			     :y (or y
 				    (if (memq position '(bottom-left bottom-right))
 					(- (cdr size) (* (length texts) 100) 20)
