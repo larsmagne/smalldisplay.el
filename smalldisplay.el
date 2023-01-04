@@ -306,7 +306,7 @@
 	     (smalldisplay-smooth
 	      (cl-loop for point in (smalldisplay-rain)
 		       collect (cons (* (car point) (/ 1280.0 24))
-				     (- 803 (* (cdr point) 130)))))))
+				     (- 803 (* (cdr point) 60)))))))
     (write-region (point-min) (point-max) "/tmp/a.png")
     (if debug
 	(call-process-region (point-min) (point-max)
@@ -354,16 +354,16 @@
 (defun smalldisplay-smooth (points)
   (if (not points)
       nil
-  (let ((acc 0)
-	(length 4))
-    (dotimes (i length)
-      (cl-incf acc (cdr (elt points i))))
-    (cl-loop for i from length upto (+ 24 length)
-	     collect (cons (car (elt points (- i (/ length 2))))
-			   (prog2
-			       (cl-incf acc (cdr (elt points i)))
-			       (/ (* acc 1.0) (1+ length))
-			     (cl-decf acc (cdr (elt points (- i length))))))))))
+    (let ((acc 0)
+	  (length 4))
+      (dotimes (i length)
+	(cl-incf acc (cdr (elt points i))))
+      (cl-loop for i from length upto (+ 24 length)
+	       collect (cons (- (car (elt points (- i (/ length 2)))) 100)
+			     (prog2
+				 (cl-incf acc (cdr (elt points i)))
+				 (/ (* acc 1.0) (1+ length))
+			       (cl-decf acc (cdr (elt points (- i length))))))))))
 
 
 (defvar smalldisplay-rain nil)
@@ -372,8 +372,8 @@
 (defun smalldisplay-rain ()
   (if (and smalldisplay-rain
 	   (not (zerop (mod (cl-incf smalldisplay-rain-count) 60))))
-    ;; Serve the cached rain values usually.
-    smalldisplay-rain
+      ;; Serve the cached rain values usually.
+      smalldisplay-rain
     (let ((rain
 	   (with-current-buffer
 	       (url-retrieve-synchronously
@@ -381,13 +381,23 @@
 		nil nil 30)
 	     (goto-char (point-min))
 	     (when (search-forward "\n\n" nil t)
-	       (cl-loop for elem
-			in (dom-by-tag
-			    (libxml-parse-xml-region (point) (point-max))
-			    'precipitation)
-			for i from 0
-			collect (cons i (string-to-number
-					 (dom-attr elem 'value))))))))
+	       (let ((elems
+		      (cl-sort
+		       (seq-filter
+			(lambda (e)
+			  (and (dom-by-tag e 'precipitation)
+			       (dom-by-tag e 'minTemperature)))
+			(dom-by-tag
+			 (libxml-parse-xml-region (point) (point-max))
+			 'time))
+		       #'string<
+		       :key (lambda (e)
+			      (dom-attr e 'from)))))
+		 (cl-loop for i from 0
+			  for elem in elems
+			  for rain = (dom-by-tag elem 'precipitation)
+			  collect (cons i (string-to-number
+					   (dom-attr rain 'value)))))))))
       (setq smalldisplay-rain rain)
       rain)))
 
