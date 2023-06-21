@@ -93,8 +93,9 @@
     (goto-char (point-min))
     (search-forward "\n\n")
     (prog1
-	(let ((data (json-parse-buffer)))
-	  (list (format "%.1f°C" (string-to-number (gethash "temp" data)))))
+	(let ((data (json-read)))
+	  (list (format "%.1f°C" (string-to-number
+				  (cdr (assq 'temp data))))))
       (kill-buffer (current-buffer)))))
 
 (defun smalldisplay--track ()
