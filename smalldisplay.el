@@ -88,10 +88,14 @@
 				   (string 32) (string 160) text))))))))
 
 (defun smalldisplay--temp ()
-  (with-temp-buffer
-    (call-process "get-temperatures" nil t)
-    (cl-loop for temp in (split-string (buffer-string) nil t)
-	     collect (format "%.1f°C" (string-to-number temp)))))
+  (with-current-buffer (url-retrieve-synchronously
+			"http://rocket-sam/get-data.php")
+    (goto-char (point-min))
+    (search-forward "\n\n")
+    (prog1
+	(let ((data (json-parse-buffer)))
+	  (list (format "%.1f°C" (string-to-number (gethash "temp" data)))))
+      (kill-buffer (current-buffer)))))
 
 (defun smalldisplay--track ()
   (let ((track (jukebox-tokenize-path (smalldisplay--current))))
@@ -147,7 +151,7 @@
 	    do
 	    (smalldisplay-stories)
 	    (smalldisplay-quimbies)
-	    (when (zerop (mod ii 200))
+	    (when (zerop (mod ii (* 60 4)))
 	      (smalldisplay-frame))
 	    do (sleep-for 1))))
 
@@ -197,9 +201,8 @@
 			    (expand-file-name
 			     "sleeve.jpg" (file-name-directory
 					   (smalldisplay--current)))))
-      (call-process-region (point-min) (point-max)
-			   "xloadimage" nil nil nil
-			   "-display" ":1" "-onroot" "-gamma" "2" "stdin"))))
+      (write-region (point-min) (point-max)
+		    "/var/www/html/smalldisplay/image-stories-1280-800.png"))))
 
 (require 'seq)
 
@@ -243,7 +246,7 @@
 			       600 200
 			       ,(list (string-remove-suffix
 				       "C"
-				       (cadr (smalldisplay--temp))))))
+				       (car (smalldisplay--temp))))))
 			    "/tmp/sleeve-stretch.jpg"))
       (write-region (point-min) (point-max) "/tmp/a.png")
       (call-process-region (point-min) (point-max)
@@ -266,9 +269,10 @@
 			   "pigz"
 			   t (current-buffer) nil
 			   "-zc")
-      (write-region (point-min) (point-max) "~/tmp/frame/image-temp.rawz")
-      (rename-file "~/tmp/frame/image-temp.rawz"
-		   "~/tmp/frame/image.rawz" t))))
+      (write-region (point-min) (point-max)
+		    "/var/www/html/frame/image-temp.rawz")
+      (rename-file "/var/www/html/frame/image-temp.rawz"
+		   "/var/www/html/frame/image.rawz" t))))
 
 
 
@@ -301,7 +305,7 @@
     (insert (smalldisplay-potato-1
 	     '(1280 . 800)
 	     `((top-right 0 80 ,(list (format-time-string "%H:%M")
-				      (cadr (smalldisplay--temp))))
+				      (car (smalldisplay--temp))))
 	       (bottom-right 690 30 ,(smalldisplay--track)))
 	     (smalldisplay-smooth
 	      (cl-loop for point in (smalldisplay-rain)
