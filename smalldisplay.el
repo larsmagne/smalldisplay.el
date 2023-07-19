@@ -241,7 +241,8 @@
   (message (format-time-string "%H:%M:%S Making"))
   (with-temp-buffer
     (set-buffer-multibyte nil)
-    (let ((track (smalldisplay--track)))
+    (let ((track (smalldisplay--track))
+	  (name "/var/www/html/smalldisplay/image-stories-1280-800.png"))
       (insert (smalldisplay '(1280 . 800)
 			    `((bottom-left ,(if (= (length track) 3)
 						520
@@ -252,8 +253,8 @@
 			    (expand-file-name
 			     "sleeve.jpg" (file-name-directory
 					   (smalldisplay--current)))))
-      (write-region (point-min) (point-max)
-		    "/var/www/html/smalldisplay/image-stories-1280-800.png"))))
+      (write-region (point-min) (point-max) (concat name ".tmp"))
+      (rename-file (concat name ".tmp") name t))))
 
 (require 'seq)
 
