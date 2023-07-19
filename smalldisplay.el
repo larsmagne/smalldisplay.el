@@ -27,7 +27,6 @@
 
 (require 'cl)
 (require 'svg)
-(require 'jukebox)
 (require 'xcb)
 
 (defun smalldisplay-image-size (file)
@@ -175,23 +174,56 @@
 		     (string-match "mpv" name))
 	   return id))
 
-(defun smalldisplay-loop-dielman ()
-  (let ((prev nil))
-    (smalldisplay-loop
-     (cl-loop
-      (with-current-buffer (url-retrieve-synchronously "http://rocket-sam/smalldisplay/image-stories-1280-800.png")
-	(goto-char (point-min))
-	(search-forward "\n\n")
-	(let ((image (buffer-substring (point) (point-max))))
-	  (kill-buffer (current-buffer))
-	  (unless (equal prev image)
-	    (switch-to-buffer "*display*")
-	    (delete-other-windows)
-	    (erase-buffer)
-	    (insert-image (create-image image 'png t
-					:scale 1))
-	    (redisplay t)))
-	(sleep-for 10))))))
+(defun smalldisplay-start-dielman ()
+  (server-start)
+  (let ((first (seq-find
+		(lambda (frame)
+		  (string-match "dielman1"
+				(cdr (assq 'name (frame-parameters frame)))))
+		(frame-list))))
+    (let* ((default-minibuffer-frame first)
+	   (frame
+	    (make-frame '((name . "smalldisplay")
+			  (minibuffer)
+			  (background-color . "black")
+			  (fullscreen . fullboth)))))
+      (select-frame frame)))
+  (fringe-mode 0)
+  (scroll-bar-mode 0)
+  (menu-bar-mode 0)
+  (tool-bar-mode 0)
+  ;; Delay until network has stabilised and then update every ten
+  ;; seconds.
+  (run-at-time 10 10 'smalldisplay-display-dielman))
+
+(defvar smalldisplay--prev-dielman nil)
+
+(defun smalldisplay-display-dielman ()
+  (save-excursion
+    (with-current-buffer (url-retrieve-synchronously "http://rocket-sam/smalldisplay/image-stories-1280-800.png")
+      (goto-char (point-min))
+      (search-forward "\n\n")
+      (let ((image (buffer-substring (point) (point-max))))
+	(kill-buffer (current-buffer))
+	(unless (equal smalldisplay--prev-dielman image)
+	  (setq smalldisplay--prev-dielman image)
+	  (if (get-buffer "*display*")
+	      (set-buffer "*display*")
+	    (pop-to-buffer "*display*")
+	    (delete-other-windows))
+	  (erase-buffer)
+	  (insert-image (create-image image 'png t
+				      :scale 1))
+	  (goto-char (point-min))
+	  (setq mode-line-format nil
+		cursor-type nil)
+	  (when t
+	    (setq truncate-lines t)
+	    (ignore-errors
+	      ;; No continuation marker.
+	      (set-display-table-slot standard-display-table 0 ?\ )
+	      (set-display-table-slot standard-display-table 1 ?\ )))
+	  (redisplay t))))))
 
 (defun smalldisplay-loop-potato ()
   (let (mpv new-mpv)
