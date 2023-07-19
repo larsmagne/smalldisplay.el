@@ -175,6 +175,24 @@
 		     (string-match "mpv" name))
 	   return id))
 
+(defun smalldisplay-loop-dielman ()
+  (let ((prev nil))
+    (smalldisplay-loop
+     (cl-loop
+      (with-current-buffer (url-retrieve-synchronously "http://rocket-sam/smalldisplay/image-stories-1280-800.png")
+	(goto-char (point-min))
+	(search-forward "\n\n")
+	(let ((image (buffer-substring (point) (point-max))))
+	  (kill-buffer (current-buffer))
+	  (unless (equal prev image)
+	    (switch-to-buffer "*display*")
+	    (delete-other-windows)
+	    (erase-buffer)
+	    (insert-image (create-image image 'png t
+					:scale 1))
+	    (redisplay t)))
+	(sleep-for 10))))))
+
 (defun smalldisplay-loop-potato ()
   (let (mpv new-mpv)
     (smalldisplay-loop
