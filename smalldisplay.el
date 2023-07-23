@@ -28,6 +28,7 @@
 (require 'cl)
 (require 'svg)
 (require 'xcb)
+(require 'eval-server)
 
 (autoload 'jukebox-tokenize-path "jukebox")
 
@@ -145,17 +146,20 @@
       (error (message "%s" err)
 	     (sleep-for 10)))))
 
-(defun smalldisplay-loop-stories ()
-  (smalldisplay-loop
-   (cl-loop for ii from 0 upto most-positive-fixnum
-	    when (or (smalldisplay-track-changed-p)
-		     (zerop (mod ii 60)))
-	    do
-	    (smalldisplay-stories)
-	    (smalldisplay-quimbies)
-	    (when (zerop (mod ii (* 60 4)))
-	      (smalldisplay-frame))
-	    do (sleep-for 1))))
+(defvar smalldisplay--notifications nil)
+
+(defun smalldisplay-start-rocket-sam ()
+  (push 'smalldisplay-display-rocket-sam smalldisplay--notifications)
+  ;; Run once a minute to get temp updates.  amp updates will be
+  ;; triggered via `smalldisplay-notify'.
+  (run-at-time 1 60 #'smalldisplay-display-rocket-sam))
+
+(defun smalldisplay-display-rocket-sam ()
+  (smalldisplay-stories)
+  (smalldisplay-quimbies)
+  (smalldisplay-frame)
+  (ignore-errors
+    (eval-at "lights" "dielman1" 8702 `(smalldisplay-notify))))
 
 (defun smalldisplay-loop-quimbies ()
   (let ((last nil))
@@ -251,7 +255,7 @@
 					      600)
 					   80
 					   ,track)
-			      (top-right 0 80 ,(smalldisplay--temp)))
+			      (top-right 0 100 ,(smalldisplay--temp)))
 			    (expand-file-name
 			     "sleeve.jpg" (file-name-directory
 					   (smalldisplay--current)))))
@@ -264,10 +268,10 @@
   (with-temp-buffer
     (set-buffer-multibyte nil)
     (let* ((files (seq-remove
-		  (lambda (file)
-		    (string-match "[0-9]+x[0-9]+\\|scaled" file))
-		  (directory-files-recursively
-		   "/var/tmp/uploads" "shot.*[.]jpg\\'")))
+		   (lambda (file)
+		     (string-match "[0-9]+x[0-9]+\\|scaled" file))
+		   (directory-files-recursively
+		    "/var/tmp/uploads" "shot.*[.]jpg\\'")))
 	   (file (nth (random (length files)) files)
 		 ;;(nth 1300 files)
 		 ))
@@ -294,39 +298,38 @@
 			 ;;"-posterize" "16"
 			 ;;"-auto-level"
 			 "/tmp/sleeve-stretch.jpg")
-    (let ((track (smalldisplay--track)))
-      (insert (smalldisplay '(1200 . 825)
-			    `((bottom-right
-			       600 200
-			       ,(list (string-remove-suffix
-				       "C"
-				       (car (smalldisplay--temp))))))
-			    "/tmp/sleeve-stretch.jpg"))
-      (write-region (point-min) (point-max) "/tmp/a.png")
-      (call-process-region (point-min) (point-max)
-			   "convert"
-			   t (current-buffer) nil
-			   "png:-"
-			   ;;"-rotate" "180"
-			   "-depth" "4"
-			   "pgm:-")
-      (write-region (point-min) (point-max) "/tmp/a.pgm")
-      (goto-char (point-min))
-      (forward-line 3)
-      ;; Remove the PGM header.
-      (delete-region (point-min) (point))
-      (while (not (eobp))
-	(insert (+ (* (char-after) 1)
-		   (* (char-after (1+ (point))) 16)))
-	(delete-region (point) (+ (point) 2)))
-      (call-process-region (point-min) (point-max)
-			   "pigz"
-			   t (current-buffer) nil
-			   "-zc")
-      (write-region (point-min) (point-max)
-		    "/var/www/html/frame/image-temp.rawz")
-      (rename-file "/var/www/html/frame/image-temp.rawz"
-		   "/var/www/html/frame/image.rawz" t))))
+    (insert (smalldisplay '(1200 . 825)
+			  `((bottom-right
+			     600 200
+			     ,(list (string-remove-suffix
+				     "C"
+				     (car (smalldisplay--temp))))))
+			  "/tmp/sleeve-stretch.jpg"))
+    (write-region (point-min) (point-max) "/tmp/a.png")
+    (call-process-region (point-min) (point-max)
+			 "convert"
+			 t (current-buffer) nil
+			 "png:-"
+			 ;;"-rotate" "180"
+			 "-depth" "4"
+			 "pgm:-")
+    (write-region (point-min) (point-max) "/tmp/a.pgm")
+    (goto-char (point-min))
+    (forward-line 3)
+    ;; Remove the PGM header.
+    (delete-region (point-min) (point))
+    (while (not (eobp))
+      (insert (+ (* (char-after) 1)
+		 (* (char-after (1+ (point))) 16)))
+      (delete-region (point) (+ (point) 2)))
+    (call-process-region (point-min) (point-max)
+			 "pigz"
+			 t (current-buffer) nil
+			 "-zc")
+    (write-region (point-min) (point-max)
+		  "/var/www/html/frame/image-temp.rawz")
+    (rename-file "/var/www/html/frame/image-temp.rawz"
+		 "/var/www/html/frame/image.rawz" t)))
 
 
 
@@ -469,12 +472,12 @@
   (let* ((previous (or previous current))
 	 (next (or next current))
 	 (line (smalldisplay-line previous next))
-	 (angle (+ (getf line :angle)
+	 (angle (+ (cl-getf line :angle)
 		   (if reverse
-		       pi
+		       float-pi
 		     0)))
 	 (smoothing 0.2)
-	 (length (* (getf line :length) smoothing)))
+	 (length (* (cl-getf line :length) smoothing)))
     (cons (+ (car current) (* (cos angle) length))
 	  (+ (cdr current) (* (sin angle) length)))))
 
@@ -571,7 +574,7 @@
 			   ;; window.  The two parts are terminated by a
 			   ;; NUL character each.
 			   (split-string
-			    (coerce
+			    (cl-coerce
 			     (slot-value
 			      (xcb:+request-unchecked+reply x
 							    (make-instance 'xcb:GetProperty
@@ -586,6 +589,14 @@
 			    (string 0)))))
       (xcb:disconnect x))))
 
+(defun smalldisplay-start-server ()
+  (start-eval-server "lights" 8702
+		     '(smalldisplay-notify)))
+
+(defun smalldisplay-notify (&optional track)
+  (dolist (func smalldisplay--notifications)
+    (funcall func track)))
+  
 (provide 'smalldisplay)
 
 ;;; smalldisplay.el ends here
