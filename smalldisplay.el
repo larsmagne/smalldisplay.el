@@ -114,12 +114,14 @@
      (t
       track))))
 
-(defvar smalldisplay-current-track "/music/tmp/.amp.current")
+(defvar smalldisplay-current-track-file "/music/tmp/.amp.current")
+(defvar smalldisplay--current-track nil)
 
 (defun smalldisplay--current ()
-  (with-temp-buffer
-    (insert-file-contents smalldisplay-current-track)
-    (buffer-substring (point-min) (1- (point-max)))))
+  (or smalldisplay--current-track
+      (with-temp-buffer
+	(insert-file-contents smalldisplay-current-track-file)
+	(buffer-substring (point-min) (1- (point-max))))))
 
 (defvar smalldisplay-current-track-last nil)
 
@@ -154,12 +156,13 @@
   ;; triggered via `smalldisplay-notify'.
   (run-at-time 1 60 #'smalldisplay-display-rocket-sam))
 
-(defun smalldisplay-display-rocket-sam ()
+(defun smalldisplay-display-rocket-sam (&optional track)
+  (setq smalldisplay--current-track track)
   (smalldisplay-stories)
-  (smalldisplay-quimbies)
-  (smalldisplay-frame)
   (ignore-errors
-    (eval-at "lights" "dielman1" 8702 `(smalldisplay-notify))))
+    (eval-at "lights" "dielman1" 8702 `(smalldisplay-notify)))
+  (smalldisplay-quimbies)
+  (smalldisplay-frame))
 
 (defun smalldisplay-loop-quimbies ()
   (let ((last nil))
