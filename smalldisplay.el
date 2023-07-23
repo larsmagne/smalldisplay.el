@@ -210,7 +210,7 @@
 
 (defvar smalldisplay--dielman-buffer nil)
 
-(defun smalldisplay-display-dielman ()
+(defun smalldisplay-display-dielman (&optional _track)
   (when smalldisplay--dielman-buffer
     ;; This will kill any transfers that are in progress.
     (kill-buffer smalldisplay--dielman-buffer))
