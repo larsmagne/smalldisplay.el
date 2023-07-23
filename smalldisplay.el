@@ -151,6 +151,7 @@
 (defvar smalldisplay--notifications nil)
 
 (defun smalldisplay-start-rocket-sam ()
+  (smalldisplay-start-server)
   (push 'smalldisplay-display-rocket-sam smalldisplay--notifications)
   ;; Run once a minute to get temp updates.  amp updates will be
   ;; triggered via `smalldisplay-notify'.
@@ -160,9 +161,10 @@
   (setq smalldisplay--current-track track)
   (smalldisplay-stories)
   (ignore-errors
-    (eval-at "lights" "dielman1" 8702 `(smalldisplay-notify)))
+    (eval-at "lights" "dielman1" 8703 `(smalldisplay-notify)))
   (smalldisplay-quimbies)
-  (smalldisplay-frame))
+  ;;(smalldisplay-frame)
+  )
 
 (defun smalldisplay-loop-quimbies ()
   (let ((last nil))
@@ -184,6 +186,8 @@
 	   return id))
 
 (defun smalldisplay-start-dielman ()
+  (smalldisplay-start-server)
+  (push 'smalldisplay-display-dielman smalldisplay--notifications)
   (server-start)
   (let ((first (seq-find
 		(lambda (frame)
@@ -204,9 +208,15 @@
   ;; Delay until network has stabilised.
   (run-at-time 10 nil 'smalldisplay-display-dielman))
 
-(defvar smalldisplay--prev-dielman nil)
+(defvar smalldisplay--dielman-buffer nil)
 
 (defun smalldisplay-display-dielman ()
+  (when smalldisplay--dielman-buffer
+    ;; This will kill any transfers that are in progress.
+    (kill-buffer smalldisplay--dielman-buffer))
+  (setq smalldisplay--dielman-buffer (smalldisplay-display-dielman-1)))
+
+(defun smalldisplay-display-dielman-1 ()
   (url-retrieve
    "http://rocket-sam/smalldisplay/image-stories-1280-800.png"
    (lambda (&rest _args)
@@ -214,25 +224,22 @@
      (search-forward "\n\n")
      (let ((image (buffer-substring (point) (point-max))))
        (kill-buffer (current-buffer))
-       (unless (equal smalldisplay--prev-dielman image)
-	 (setq smalldisplay--prev-dielman image)
-	 (if (get-buffer "*display*")
-	     (set-buffer "*display*")
-	   (pop-to-buffer "*display*")
-	   (delete-other-windows))
-	 (erase-buffer)
-	 (insert-image (create-image image 'png t
-				     :scale 1))
-	 (goto-char (point-min))
-	 (setq mode-line-format nil
-	       cursor-type nil)
-	 (setq truncate-lines t)
-	 (ignore-errors
-	   ;; No continuation marker.
-	   (set-display-table-slot standard-display-table 0 ?\ )
-	   (set-display-table-slot standard-display-table 1 ?\ )))
-       (redisplay t))
-     (run-at-time 10 nil 'smalldisplay-display-dielman))))
+       (if (get-buffer "*display*")
+	   (set-buffer "*display*")
+	 (pop-to-buffer "*display*")
+	 (delete-other-windows))
+       (erase-buffer)
+       (insert-image (create-image image 'png t
+				   :scale 1))
+       (goto-char (point-min))
+       (setq mode-line-format nil
+	     cursor-type nil)
+       (setq truncate-lines t)
+       (ignore-errors
+	 ;; No continuation marker.
+	 (set-display-table-slot standard-display-table 0 ?\ )
+	 (set-display-table-slot standard-display-table 1 ?\ )))
+     (redisplay t))))
 
 (defun smalldisplay-loop-potato ()
   (let (mpv new-mpv)
@@ -593,7 +600,7 @@
       (xcb:disconnect x))))
 
 (defun smalldisplay-start-server ()
-  (start-eval-server "lights" 8702
+  (start-eval-server "lights" 8703
 		     '(smalldisplay-notify)))
 
 (defun smalldisplay-notify (&optional track)
