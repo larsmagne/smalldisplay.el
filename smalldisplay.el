@@ -228,6 +228,7 @@
 	   (set-buffer "*display*")
 	 (pop-to-buffer "*display*")
 	 (delete-other-windows))
+       (buffer-disable-undo)
        (erase-buffer)
        (insert-image (create-image image 'png t
 				   :scale 1))
