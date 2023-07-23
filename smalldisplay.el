@@ -609,6 +609,11 @@
 		     '(smalldisplay-notify)))
 
 (defun smalldisplay-notify (&optional track)
+  ;; Return immediately and then run notification.
+  (run-at-time 0.1 nil 'smalldisplay--run-notifications)
+  nil)
+
+(defun smalldisplay--run-notifications ()
   (dolist (func smalldisplay--notifications)
     (funcall func track)))
   
