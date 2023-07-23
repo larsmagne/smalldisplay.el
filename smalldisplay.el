@@ -163,21 +163,15 @@
   (ignore-errors
     (eval-at "lights" "dielman1" 8703 `(smalldisplay-notify)))
   (smalldisplay-quimbies)
+  (ignore-errors
+    (eval-at "lights" "quimbies" 8703 `(smalldisplay-notify)))
   ;;(smalldisplay-frame)
   )
 
-(defun smalldisplay-loop-quimbies ()
-  (let ((last nil))
-    (smalldisplay-loop
-     (cl-loop
-      (let ((now (file-attribute-modification-time
-		  (ignore-errors
-		    (file-attributes  "~/tmp/quimbies.file")))))
-	(when (or (not now)
-		  (not (equal last now)))
-	  (setq last now)
-	  (smalldisplay-display-quimbies)))
-      (sleep-for 1)))))
+(defun smalldisplay-start-quimbies ()
+  (smalldisplay-start-server)
+  (push 'smalldisplay-display-quimbies smalldisplay--notifications)
+  (smalldisplay-display-quimbies))
 
 (defun smalldisplay-mpv-id ()
   (cl-loop for (id . name) in (smalldisplay-list-windows)
@@ -362,12 +356,13 @@
 			  `((top-left -30 260 ,(smalldisplay--track)))
 			  "/tmp/quimbies.jpg"))
     (write-region (point-min) (point-max) "~/tmp/quimbies.file.tmp")
-    (rename-file "~/tmp/quimbies.file.tmp" "~/tmp/quimbies.file" t)))
+    (rename-file "~/tmp/quimbies.file.tmp"
+		 "/var/www/html/smalldisplay/quimbies-1280-800.png" t)))
 
-(defun smalldisplay-display-quimbies ()
+(defun smalldisplay-display-quimbies (&optional _track)
   (call-process "xloadimage" nil nil nil
 		"-display" ":1" "-onroot" "-gamma" "2"
-		(expand-file-name "~/tmp/quimbies.file")))
+		"/var/www/html/smalldisplay/quimbies-1280-800.png"))
 
 (defvar smalldisplay-displayer nil)
 
