@@ -155,18 +155,25 @@
   (push 'smalldisplay-display-rocket-sam smalldisplay--notifications)
   ;; Run once a minute to get temp updates.  amp updates will be
   ;; triggered via `smalldisplay-notify'.
-  (run-at-time 1 60 #'smalldisplay-display-rocket-sam))
+  (run-at-time 1 60 #'smalldisplay-perhaps-display-rocket-sam)
+  (run-at-time 600 600 #'smalldisplay-frame))
+
+(defvar smalldisplay--last-update nil)
+(defun smalldisplay-perhaps-display-rocket-sam ()
+  (when (or (not smalldisplay--last-update)
+	    (> (- (float-time) smalldisplay--last-update)
+	       600))
+    (smalldisplay-display-rocket-sam)))
 
 (defun smalldisplay-display-rocket-sam (&optional track)
-  (setq smalldisplay--current-track track)
+  (when track
+    (setq smalldisplay--current-track track))
   (smalldisplay-stories)
   (ignore-errors
-    (eval-at "lights" "dielman1" 8703 `(smalldisplay-notify)))
+    (eval-at-async "lights" "dielman1" 8703 `(smalldisplay-notify)))
   (smalldisplay-quimbies)
   (ignore-errors
-    (eval-at "lights" "quimbies" 8703 `(smalldisplay-notify)))
-  ;;(smalldisplay-frame)
-  )
+    (eval-at-async "lights" "quimbies" 8703 `(smalldisplay-notify))))
 
 (defun smalldisplay-start-quimbies ()
   (smalldisplay-start-server)
