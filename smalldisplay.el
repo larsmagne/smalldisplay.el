@@ -357,12 +357,12 @@
 			  "/tmp/quimbies.jpg"))
     (write-region (point-min) (point-max) "~/tmp/quimbies.file.tmp")
     (rename-file "~/tmp/quimbies.file.tmp"
-		 "/var/www/html/smalldisplay/quimbies-1280-800.png" t)))
+		 "~/tmp/quimbies-1280-800.png" t)))
 
 (defun smalldisplay-display-quimbies (&optional _track)
   (call-process "xloadimage" nil nil nil
 		"-display" ":1" "-onroot" "-gamma" "2"
-		"/var/www/html/smalldisplay/quimbies-1280-800.png"))
+		(expand-file-name "~/tmp/quimbies-1280-800.png")))
 
 (defvar smalldisplay-displayer nil)
 
