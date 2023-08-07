@@ -215,6 +215,8 @@
   (when smalldisplay--dielman-buffer
     ;; This will kill any transfers that are in progress.
     (when-let ((proc (get-buffer-process smalldisplay--dielman-buffer)))
+      (set-process-filter proc nil)
+      (set-process-sentinel proc nil)
       (delete-process proc))
     (kill-buffer smalldisplay--dielman-buffer))
   (setq smalldisplay--dielman-buffer (smalldisplay-display-dielman-1)))
@@ -227,8 +229,6 @@
      (search-forward "\n\n")
      (let ((image (buffer-substring (point) (point-max))))
        (when-let ((proc (get-buffer-process (current-buffer))))
-	 (set-process-filter proc nil)
-	 (set-process-sentinel proc nil)
 	 (delete-process proc))
        (kill-buffer (current-buffer))
        (let ((frame (seq-find
