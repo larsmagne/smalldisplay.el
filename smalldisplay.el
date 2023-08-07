@@ -227,8 +227,17 @@
      (search-forward "\n\n")
      (let ((image (buffer-substring (point) (point-max))))
        (when-let ((proc (get-buffer-process (current-buffer))))
+	 (set-process-filter proc nil)
+	 (set-process-sentinel proc nil)
 	 (delete-process proc))
        (kill-buffer (current-buffer))
+       (let ((frame (seq-find
+		     (lambda (frame)
+		       (string-match
+			"smalldisplay"
+			(cdr (assq 'name (frame-parameters frame)))))
+		     (frame-list))))
+	 (select-frame frame))
        (if (get-buffer "*display*")
 	   (set-buffer "*display*")
 	 (pop-to-buffer "*display*")
