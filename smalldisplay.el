@@ -163,6 +163,7 @@
   (when (or (not smalldisplay--last-update)
 	    (> (- (float-time) smalldisplay--last-update)
 	       600))
+    (setq smalldisplay--last-update (float-time))
     (smalldisplay-display-rocket-sam)))
 
 (defun smalldisplay-display-rocket-sam (&optional track)
