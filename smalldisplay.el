@@ -614,6 +614,7 @@
 			      'value)
 			     'string)
 			    (string 0)))))
+      (delete-process (slot-value x 'process))
       (xcb:disconnect x))))
 
 (defun smalldisplay-start-server ()
