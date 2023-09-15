@@ -582,8 +582,16 @@
 			     :font-family "futura"
 			     args)))))
 
+(defvar smalldisplay--connections (make-hash-table :test #'equal))
+
+(defun smalldisplay--connect (display)
+  (or (gethash display smalldisplay--connections)
+      (let ((x (xcb:connect display)))
+	(setf (gethash display smalldisplay--connections) x)
+	x)))
+
 (defun smalldisplay-list-windows (&optional display)
-  (let* ((x (xcb:connect (or display ":1")))
+  (let* ((x (smalldisplay--connect (or display ":1")))
 	 (root (slot-value (car (slot-value (xcb:get-setup x) 'roots))
                            'root))
 	 (tree (xcb:+request-unchecked+reply x
@@ -614,8 +622,7 @@
 			      'value)
 			     'string)
 			    (string 0)))))
-      (delete-process (slot-value x 'process))
-      (xcb:disconnect x))))
+      (xcb:flush x))))
 
 (defun smalldisplay-start-server ()
   (start-eval-server "lights" 8703
