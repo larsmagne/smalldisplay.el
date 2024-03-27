@@ -66,9 +66,8 @@
     (with-temp-buffer
       (set-buffer-multibyte nil)
       (svg-print svg)
-      (call-process-region (point-min) (point-max) "convert"
-			   t (current-buffer)
-			   nil "svg:-" "png:-")
+      (call-process-region (point-min) (point-max) "rsvg-convert"
+			   t (current-buffer))
       (buffer-string))))
 
 (defun smalldisplay-svg-multi-line-text (svg texts &rest args)
@@ -81,13 +80,7 @@
       (cl-loop for text in texts
 	       collect (dom-node 'tspan `((dy . "1.0em")
 					  (x . ,(cdr (assoc 'x a))))
-				 (svg--encode-text
-				  ;; To ensure that spaces survive the
-				  ;; SVG machinery (especially around
-				  ;; entities like &amp;), make them
-				  ;; into non-breaking spaces.
-				  (replace-regexp-in-string
-				   (string 32) (string 160) text))))))))
+				 (svg--encode-text text)))))))
 
 (defun smalldisplay--temp ()
   (with-current-buffer (url-retrieve-synchronously
@@ -567,7 +560,7 @@
 				 ((memq position '(top-right bottom-right))
 				  (- (car size) 20))
 				 ((eq position 'top-left)
-				  -60)
+				  20)
 				 (t
 				  0))
 			     :y (or y
