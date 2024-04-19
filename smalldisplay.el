@@ -284,73 +284,78 @@
 (require 'seq)
 
 (defun smalldisplay-frame ()
-  (with-temp-buffer
-    (set-buffer-multibyte nil)
-    (let* ((files (seq-remove
-		   (lambda (file)
-		     (string-match "[0-9]+x[0-9]+\\|scaled" file))
-		   (directory-files-recursively
-		    "/var/tmp/uploads" "shot.*[.]jpg\\'")))
-	   (file (nth (random (length files)) files)
-		 ;;(nth 1300 files)
-		 ))
-      (setq file (expand-file-name
-		  "sleeve.jpg" (file-name-directory (smalldisplay--current))))
-      (call-process "convert" nil nil nil
-		    "-trim" "-fuzz" "10%"
-		    file "/tmp/trim.jpg")
-      (call-process "sharp" nil nil nil
+  (let* ((files (seq-remove
+		 (lambda (file)
+		   (string-match "[0-9]+x[0-9]+\\|scaled" file))
+		 (directory-files-recursively
+		  "/var/tmp/uploads" "shot.*[.]jpg\\'")))
+	 (file (nth (random (length files)) files)
+	       ;;(nth 1300 files)
+	       ))
+    (setq file (expand-file-name
+		"sleeve.jpg" (file-name-directory (smalldisplay--current))))
+    (call-process "convert" nil nil nil
+		  "-trim" "-fuzz" "10%"
+		  file "/tmp/trim.jpg")
+    (set-process-sentinel
+     ;; This is very slow, so do it in the background.
+     (start-process "sharp" (get-buffer-create "*sharp*")
+		    "sharp"
 		    "-m" "1" "-f" "10"
-		    "/tmp/trim.jpg" "/tmp/sharp.jpg"))
-    (insert-file-contents-literally "/tmp/sharp.jpg")
-    (call-process-region (point-min) (point-max)
-			 "convert"
-			 t (current-buffer) nil
-			 "jpg:-"
-			 "-resize" "1200x825^"
-			 "-gravity" "Center"
-			 "-extent" "1200x825"
-			 "-level" "0%,80%"
-			 "-contrast-stretch" "0.0x5.0%"
-			 "-colorspace" "gray"
-			 ;;"-noise" "5" "-median" "5" "-unsharp" "5"
-			 ;;"-posterize" "16"
-			 ;;"-auto-level"
-			 "/tmp/sleeve-stretch.jpg")
-    (insert (smalldisplay '(1200 . 825)
-			  `((bottom-right
-			     600 200
-			     ,(list (string-remove-suffix
-				     "C"
-				     (car (smalldisplay--temp))))))
-			  "/tmp/sleeve-stretch.jpg"))
-    (write-region (point-min) (point-max) "/tmp/a.png")
-    (call-process-region (point-min) (point-max)
-			 "convert"
-			 t (current-buffer) nil
-			 "png:-"
-			 ;;"-rotate" "180"
-			 "-depth" "4"
-			 "pgm:-")
-    (write-region (point-min) (point-max) "/tmp/a.pgm")
-    (goto-char (point-min))
-    (forward-line 3)
-    ;; Remove the PGM header.
-    (delete-region (point-min) (point))
-    (while (not (eobp))
-      (insert (+ (* (char-after) 1)
-		 (* (char-after (1+ (point))) 16)))
-      (delete-region (point) (+ (point) 2)))
-    (call-process-region (point-min) (point-max)
-			 "pigz"
-			 t (current-buffer) nil
-			 "-zc")
-    (write-region (point-min) (point-max)
-		  "/var/www/html/frame/image-temp.rawz")
-    (rename-file "/var/www/html/frame/image-temp.rawz"
-		 "/var/www/html/frame/image.rawz" t)))
-
-
+		    "/tmp/trim.jpg" "/tmp/sharp.jpg")
+     (lambda (proc _change)
+       (unless (process-live-p proc)
+	 (with-temp-buffer
+	   (set-buffer-multibyte nil)
+	   (insert-file-contents-literally "/tmp/sharp.jpg")
+	   (call-process-region (point-min) (point-max)
+				"convert"
+				t (current-buffer) nil
+				"jpg:-"
+				"-resize" "1200x825^"
+				"-gravity" "Center"
+				"-extent" "1200x825"
+				"-level" "0%,80%"
+				"-contrast-stretch" "0.0x5.0%"
+				"-colorspace" "gray"
+				;;"-noise" "5" "-median" "5" "-unsharp" "5"
+				;;"-posterize" "16"
+				;;"-auto-level"
+				"/tmp/sleeve-stretch.jpg")
+	   (insert (smalldisplay '(1200 . 825)
+				 `((bottom-right
+				    600 200
+				    ,(list (string-remove-suffix
+					    "C"
+					    (car (smalldisplay--temp))))))
+				 "/tmp/sleeve-stretch.jpg"))
+	   (write-region (point-min) (point-max) "/tmp/a.png")
+	   (thread-yield)
+	   (call-process-region (point-min) (point-max)
+				"convert"
+				t (current-buffer) nil
+				"png:-"
+				;;"-rotate" "180"
+				"-depth" "4"
+				"pgm:-")
+	   (thread-yield)
+	   (write-region (point-min) (point-max) "/tmp/a.pgm")
+	   (goto-char (point-min))
+	   (forward-line 3)
+	   ;; Remove the PGM header.
+	   (delete-region (point-min) (point))
+	   (while (not (eobp))
+	     (insert (+ (* (char-after) 1)
+			(* (char-after (1+ (point))) 16)))
+	     (delete-region (point) (+ (point) 2)))
+	   (call-process-region (point-min) (point-max)
+				"pigz"
+				t (current-buffer) nil
+				"-zc")
+	   (write-region (point-min) (point-max)
+			 "/var/www/html/frame/image-temp.rawz")
+	   (rename-file "/var/www/html/frame/image-temp.rawz"
+			"/var/www/html/frame/image.rawz" t)))))))
 
 (defun smalldisplay-quimbies ()
   (message (format-time-string "%H:%M:%S Making"))
