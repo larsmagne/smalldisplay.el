@@ -25,7 +25,6 @@
 
 ;;; Code:
 
-(require 'cl)
 (require 'svg)
 (require 'xcb)
 (require 'eval-server)
@@ -46,6 +45,15 @@
     (when image
       (let ((image-size (smalldisplay-image-size image))
 	    ratio)
+	;; Scale image down a bit because imagemagick doesn't
+	;; like big embeds.
+	(when (> (car image-size) 2000)
+	  (call-process-region (point-min) (point-max)
+			       "convert" t t nil
+			       "-resize" "2000x"
+			       image "/tmp/sleeve.jpg")
+	  (setq image-size (smalldisplay-image-size image)
+		image "/tmp/sleeve.jpg"))
 	;; Ensure that the image fits on the screen by scaling up/down.
 	(setq ratio (/ (* (car size) 1.0) (car image-size)))
 	(when (< (* ratio (cdr image-size))
@@ -66,6 +74,7 @@
     (with-temp-buffer
       (set-buffer-multibyte nil)
       (svg-print svg)
+      (write-region (point-min) (point-max) "/tmp/a.svg")
       (call-process-region (point-min) (point-max) "rsvg-convert"
 			   t (current-buffer))
       (buffer-string))))
@@ -541,10 +550,12 @@
 		   'smalldisplay-svg-multi-line-text
 		   svg strings
 		   :text-anchor
-		   (if (memq position '(top-right bottom-right))
+		   (if (memq position '(top-right bottom-right
+						  top-right-rotated))
 		       "end"
 		     "start")
-		   :x (if (memq position '(top-right bottom-right))
+		   :x (if (memq position '(top-right bottom-right
+						     top-right-rotated))
 			  (- (car size) 20)
 			20)
 		   :y y
@@ -552,7 +563,10 @@
 		   :font-weight "bold"
 		   :fill "white"
 		   :font-family "futura"
-		   args)
+		   (if (eq position 'top-right-rotated)
+		       `(:transform: "translateX(-50%) translateY(-50%)"
+				     ,@args)
+		     args))
 		(cl-loop for stroke in (list (max (/ font-size 16) 2) 1)
 			 do (apply
 			     'smalldisplay-svg-multi-line-text
@@ -562,15 +576,19 @@
 				 "end"
 			       "start")
 			     :x (cond
-				 ((memq position '(top-right bottom-right))
+				 ((memq position '(top-right
+						   bottom-right
+						   top-right-rotated))
 				  (- (car size) 20))
 				 ((eq position 'top-left)
 				  20)
 				 (t
 				  0))
 			     :y (or y
-				    (if (memq position '(bottom-left bottom-right))
-					(- (cdr size) (* (length texts) 100) 20)
+				    (if (memq position '(bottom-left
+							 bottom-right))
+					(- (cdr size) (* (length texts) 100)
+					   20)
 				      20))
 			     :font-size font-size
 			     :stroke "black"
@@ -578,7 +596,13 @@
 			     :font-weight "bold"
 			     :fill "white"
 			     :font-family "futura"
-			     args)))))
+			     (if (eq position 'top-right-rotated)
+				 `(:transform
+				   ,(format "translate(%s,-%s) rotate(90)"
+					    (- (car size) 20)
+					    (- (cdr size) 40))
+				   ,@args)
+			       args))))))
 
 (defvar smalldisplay--connections (make-hash-table :test #'equal))
 
