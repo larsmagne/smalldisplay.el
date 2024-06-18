@@ -125,23 +125,6 @@
 	(insert-file-contents smalldisplay-current-track-file)
 	(buffer-substring (point-min) (1- (point-max))))))
 
-(defvar smalldisplay-current-track-last nil)
-
-(defun smalldisplay-track-changed-p ()
-  (let ((current (ignore-errors
-		   (smalldisplay--current))))
-    (if (not current)
-	nil
-      (let ((new (list (ignore-errors
-			 (file-attribute-modification-time
-			  (file-attributes
-			   smalldisplay-current-track)))
-		       current)))
-	(if (equal new smalldisplay-current-track-last)
-	    nil
-	  (setq smalldisplay-current-track-last new)
-	  t))))) 
-
 (defmacro smalldisplay-loop (&rest body)
   `(cl-loop
     (condition-case err
@@ -174,6 +157,9 @@
   (smalldisplay-stories)
   (ignore-errors
     (eval-at-async "lights" "dielman1" 8703 `(smalldisplay-notify)))
+  (ignore-errors
+    (eval-at-async "lights" "fw" 8703
+		   `(smalldisplay-notify ,(smalldisplay--current))))
   (smalldisplay-quimbies)
   (ignore-errors
     (eval-at-async "lights" "quimbies" 8703 `(smalldisplay-notify))))
@@ -259,17 +245,32 @@
 	 (set-display-table-slot standard-display-table 1 ?\ )))
      (redisplay t))))
 
+(defun smalldisplay-start-potato ()
+  (smalldisplay-start-server)
+  (setq smalldisplay--current-track (smalldisplay--current))
+  (push 'smalldisplay-display-potato smalldisplay--notifications)
+  (smalldisplay-loop-potato))
+
+(defun smalldisplay-display-potato (&optional track)
+  (message "%s" track)
+  (when track
+    (setq smalldisplay--current-track track)
+    (call-process "touch" nil nil nil smalldisplay-current-track-file)))
+
 (defun smalldisplay-loop-potato ()
-  (let (mpv new-mpv)
+  (let ((track smalldisplay--current-track)
+	mpv new-mpv)
     (smalldisplay-loop
      (cl-loop for i from 0
 	      when (or
-		    (smalldisplay-track-changed-p)
+		    (not (equal track smalldisplay--current-track))
 		    (not (equal (setq new-mpv (smalldisplay-mpv-id)) mpv))
 		    (zerop (mod i 30)))
 	      do (smalldisplay-potato)
-	      (setq mpv new-mpv)
-	      do (sleep-for 1)))))
+	      (setq mpv new-mpv
+		    track smalldisplay--current-track)
+	      do (sleep-for 1)
+	      (message smalldisplay--current-track)))))
 
 (defun smalldisplay-stories ()
   (message (format-time-string "%H:%M:%S Making"))
