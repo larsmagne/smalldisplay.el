@@ -29,8 +29,6 @@
 (require 'xcb)
 (require 'eval-server)
 
-(autoload 'jukebox-tokenize-path "jukebox")
-
 (defun smalldisplay-image-size (file)
   (with-temp-buffer
     (call-process "identify" nil (current-buffer) nil
@@ -102,8 +100,29 @@
 				  (cdr (assq 'temp data))))))
       (kill-buffer (current-buffer)))))
 
+(defun smalldisplay-path-element (n path)
+  "Return the Nth reversed element in PATH."
+  (while (not (zerop n))
+    (setq path (directory-file-name (file-name-directory path)))
+    (cl-decf n))
+  (file-name-nondirectory path))
+
+(defun smalldisplay-tokenize-path (file)
+  (let ((track (smalldisplay-path-element 0 file))
+	(album (smalldisplay-path-element 1 file))
+	(group (smalldisplay-path-element 2 file)))
+    (setq album (replace-regexp-in-string " +([0-9]+)\\'" "" album))
+    (setq album (replace-regexp-in-string " +([0-9]+):" ":" album))
+    (setq track (replace-regexp-in-string
+		 "\\`[0-9][0-9]-\\|[.]\\(flac\\|mp3\\)\\'" "" track))
+    (when (string-match " - " track)
+      (let ((split (split-string track " - ")))
+	(setq group (car split)
+	      track (cadr split))))
+    (list group album track)))
+
 (defun smalldisplay--track ()
-  (let ((track (jukebox-tokenize-path (smalldisplay--current))))
+  (let ((track (smalldisplay-tokenize-path (smalldisplay--current))))
     ;; If the album and song name is the same, then drop the track
     ;; name.
     (cond
@@ -245,19 +264,23 @@
 	 (set-display-table-slot standard-display-table 1 ?\ )))
      (redisplay t))))
 
-(defun smalldisplay-start-potato ()
+(defun smalldisplay-start-tube ()
+  (setq smalldisplay-current-track-file "/tmp/.amp.current")
   (smalldisplay-start-server)
   (setq smalldisplay--current-track (smalldisplay--current))
-  (push 'smalldisplay-display-potato smalldisplay--notifications)
-  (smalldisplay-loop-potato))
+  (push 'smalldisplay-display-tube smalldisplay--notifications)
+  (smalldisplay-loop-tube))
 
-(defun smalldisplay-display-potato (&optional track)
-  (message "%s" track)
+(defun smalldisplay-display-tube (&optional track)
+  (message "Track: %s" track)
   (when track
     (setq smalldisplay--current-track track)
-    (call-process "touch" nil nil nil smalldisplay-current-track-file)))
+    (with-temp-buffer
+      (insert track)
+      (write-region (point-min) (point-max) smalldisplay-current-track-file
+		    nil 'silent))))
 
-(defun smalldisplay-loop-potato ()
+(defun smalldisplay-loop-tube ()
   (let ((track smalldisplay--current-track)
 	mpv new-mpv)
     (smalldisplay-loop
@@ -266,7 +289,7 @@
 		    (not (equal track smalldisplay--current-track))
 		    (not (equal (setq new-mpv (smalldisplay-mpv-id)) mpv))
 		    (zerop (mod i 30)))
-	      do (smalldisplay-potato)
+	      do (smalldisplay-tube)
 	      (setq mpv new-mpv
 		    track smalldisplay--current-track)
 	      do (sleep-for 1)
@@ -391,10 +414,10 @@
 
 (defvar smalldisplay-displayer nil)
 
-(defun smalldisplay-potato (&optional debug)
+(defun smalldisplay-tube (&optional debug)
   (with-temp-buffer
     (set-buffer-multibyte nil)
-    (insert (smalldisplay-potato-1
+    (insert (smalldisplay-tube-1
 	     '(1280 . 800)
 	     `((top-right 0 80 ,(list (format-time-string "%H:%M")
 				      (car (smalldisplay--temp))))
@@ -403,24 +426,24 @@
 	      (cl-loop for point in (smalldisplay-rain)
 		       collect (cons (* (car point) (/ 1280.0 24))
 				     (- 803 (* (cdr point) 60)))))))
-    (write-region (point-min) (point-max) "/tmp/a.png")
+    (write-region (point-min) (point-max) "/tmp/a.png" nil 'silent)
     (if debug
 	(call-process-region (point-min) (point-max)
 			     "feh" nil nil nil "-ZF" "/tmp/a.png")
       (let ((prev smalldisplay-displayer))
 	(setq smalldisplay-displayer
-	      (start-process "qiv" nil "/usr/src/qiv-2.2.4/qiv"
-			     "-p" "--display" ":1" "/tmp/a.png"))
+	      (start-process "qiv" nil "~/src/pqiv/pqiv"
+			     "-c" "-f" "-i" "/tmp/a.png"))
 	(when prev
 	  (sleep-for 0.1)
 	  (delete-process prev))))))
 
-(defun smalldisplay-potato-1 (size texts rain)
+(defun smalldisplay-tube-1 (size texts rain)
   (let ((svg (svg-create (car size) (cdr size)
 			 :xmlns:xlink "http://www.w3.org/1999/xlink")))
     (when nil
-    (svg-rectangle svg 0 0 (car size) (cdr size)
-		   :fill "#000001"))
+      (svg-rectangle svg 0 0 (car size) (cdr size)
+		     :fill "#000001"))
     (smalldisplay-svg-path
      svg
      :d (smalldisplay-path rain)
@@ -440,7 +463,7 @@
 			       "-background" "transparent"
 			       ;;"+antialias"
 			       "svg:-" "png:-")
-	(write-region (point-min) (point-max) "/tmp/b.svg")
+	(write-region (point-min) (point-max) "/tmp/b.svg" nil 'silent)
 	(call-process "inkscape" nil nil nil "-z" "/tmp/b.svg"
 		      "-e" "/tmp/b.png")
 	(erase-buffer)
