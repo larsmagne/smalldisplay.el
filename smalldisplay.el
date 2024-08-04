@@ -189,10 +189,12 @@
   (smalldisplay-display-quimbies))
 
 (defun smalldisplay-mpv-id ()
-  (cl-loop for (id . name) in (smalldisplay-list-windows)
+  (cl-loop for pid in (list-system-processes)
+	   for atts = (process-attributes pid)
+	   for name = (cdr (assq 'args atts))
 	   when (and name
-		     (string-match "mpv" name))
-	   return id))
+		     (string-match "/mpv" name))
+	   return pid))
 
 (defun smalldisplay-start-dielman ()
   (smalldisplay-start-server)
@@ -265,6 +267,10 @@
      (redisplay t))))
 
 (defun smalldisplay-start-tube ()
+  ;; Have a black background to avoid glitches when mpv restarts.
+  (start-process "blackness" nil "~/src/pqiv/pqiv"
+		 "-c" "-f"
+		 (expand-file-name "~/src/smalldisplay.el/black.png"))
   (setq smalldisplay-current-track-file "/tmp/.amp.current")
   (smalldisplay-start-server)
   (setq smalldisplay--current-track (smalldisplay--current))
