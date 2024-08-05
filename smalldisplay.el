@@ -269,7 +269,7 @@
 (defun smalldisplay-start-tube ()
   ;; Have a black background to avoid glitches when mpv restarts.
   (start-process "blackness" nil "~/src/pqiv/pqiv"
-		 "-c" "-f"
+		 "-f" "-i"
 		 (expand-file-name "~/src/smalldisplay.el/black.png"))
   (setq smalldisplay-current-track-file "/tmp/.amp.current")
   (smalldisplay-start-server)
@@ -282,7 +282,7 @@
   (when track
     (setq smalldisplay--current-track track)
     (with-temp-buffer
-      (insert track)
+      (insert track "\n")
       (write-region (point-min) (point-max) smalldisplay-current-track-file
 		    nil 'silent))))
 
