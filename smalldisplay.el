@@ -173,15 +173,17 @@
 (defun smalldisplay-display-rocket-sam (&optional track)
   (when track
     (setq smalldisplay--current-track track))
-  (smalldisplay-stories)
+  (smalldisplay-make-dielman1-image)
+  (smalldisplay-make-dielman4-image)
   (ignore-errors
     (eval-at-async "lights" "dielman1" 8703 `(smalldisplay-notify)))
   (ignore-errors
     (eval-at-async "lights" "fw" 8703
 		   `(smalldisplay-notify ,(smalldisplay--current))))
-  (smalldisplay-quimbies)
   (ignore-errors
-    (eval-at-async "lights" "quimbies" 8703 `(smalldisplay-notify))))
+    (eval-at-async "lights" "dielman4" 8703 `(smalldisplay-notify)))
+  (ignore-errors
+    (eval-at-async "lights" "tube" 8703 `(smalldisplay-notify ,track))))
 
 (defun smalldisplay-start-quimbies ()
   (smalldisplay-start-server)
@@ -233,7 +235,10 @@
 
 (defun smalldisplay-display-dielman-1 ()
   (url-retrieve
-   "http://rocket-sam/smalldisplay/image-stories-1280-800.png"
+   (format "http://rocket-sam/smalldisplay/%s"
+	   (if (equal (system-name) "dielman1")
+	       "image-dielman1-1280-800.png"
+	     "image-dielman4-1280-800.png"))
    (lambda (&rest _args)
      (goto-char (point-min))
      (search-forward "\n\n")
@@ -301,12 +306,12 @@
 	      do (sleep-for 1)
 	      (message smalldisplay--current-track)))))
 
-(defun smalldisplay-stories ()
+(defun smalldisplay-make-dielman1-image ()
   (message (format-time-string "%H:%M:%S Making"))
   (with-temp-buffer
     (set-buffer-multibyte nil)
     (let ((track (smalldisplay--track))
-	  (name "/var/www/html/smalldisplay/image-stories-1280-800.png"))
+	  (name "/var/www/html/smalldisplay/image-dielman1-1280-800.png"))
       (insert (smalldisplay '(1280 . 800)
 			    `((bottom-left ,(if (= (length track) 3)
 						520
@@ -314,6 +319,19 @@
 					   80
 					   ,track)
 			      (top-right 0 100 ,(smalldisplay--temp)))
+			    (expand-file-name
+			     "sleeve.jpg" (file-name-directory
+					   (smalldisplay--current)))))
+      (write-region (point-min) (point-max) (concat name ".tmp"))
+      (rename-file (concat name ".tmp") name t))))
+
+(defun smalldisplay-make-dielman4-image ()
+  (with-temp-buffer
+    (set-buffer-multibyte nil)
+    (let ((track (smalldisplay--track))
+	  (name "/var/www/html/smalldisplay/image-dielman4-1280-800.png"))
+      (insert (smalldisplay '(1280 . 800)
+			    `((top-left -30 260 ,(smalldisplay--track)))
 			    (expand-file-name
 			     "sleeve.jpg" (file-name-directory
 					   (smalldisplay--current)))))
