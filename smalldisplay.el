@@ -178,17 +178,9 @@
   (ignore-errors
     (eval-at-async "lights" "dielman1" 8703 `(smalldisplay-notify)))
   (ignore-errors
-    (eval-at-async "lights" "fw" 8703
-		   `(smalldisplay-notify ,(smalldisplay--current))))
-  (ignore-errors
     (eval-at-async "lights" "dielman4" 8703 `(smalldisplay-notify)))
   (ignore-errors
     (eval-at-async "lights" "tube" 8703 `(smalldisplay-notify ,track))))
-
-(defun smalldisplay-start-quimbies ()
-  (smalldisplay-start-server)
-  (push 'smalldisplay-display-quimbies smalldisplay--notifications)
-  (smalldisplay-display-quimbies))
 
 (defun smalldisplay-mpv-id ()
   (cl-loop for pid in (list-system-processes)
@@ -413,28 +405,6 @@
 			 "/var/www/html/frame/image-temp.rawz")
 	   (rename-file "/var/www/html/frame/image-temp.rawz"
 			"/var/www/html/frame/image.rawz" t)))))))
-
-(defun smalldisplay-quimbies ()
-  (message (format-time-string "%H:%M:%S Making"))
-  (call-process "convert" nil nil nil
-		"-resize" "1280x" 
-		(expand-file-name
-		 "sleeve.jpg" (file-name-directory
-			       (smalldisplay--current)))
-		"/tmp/quimbies.jpg")
-  (with-temp-buffer
-    (set-buffer-multibyte nil)
-    (insert (smalldisplay '(1280 . 800)
-			  `((top-left -30 260 ,(smalldisplay--track)))
-			  "/tmp/quimbies.jpg"))
-    (write-region (point-min) (point-max) "~/tmp/quimbies.file.tmp")
-    (rename-file "~/tmp/quimbies.file.tmp"
-		 "~/tmp/quimbies-1280-800.png" t)))
-
-(defun smalldisplay-display-quimbies (&optional _track)
-  (call-process "xloadimage" nil nil nil
-		"-display" ":1" "-onroot" "-gamma" "2"
-		(expand-file-name "~/tmp/quimbies-1280-800.png")))
 
 (defvar smalldisplay-displayer nil)
 
