@@ -26,7 +26,6 @@
 ;;; Code:
 
 (require 'svg)
-(require 'xcb)
 (require 'eval-server)
 
 (defun smalldisplay-image-size (file)
@@ -621,48 +620,6 @@
 					    (- (cdr size) 40))
 				   ,@args)
 			       args))))))
-
-(defvar smalldisplay--connections (make-hash-table :test #'equal))
-
-(defun smalldisplay--connect (display)
-  (or (gethash display smalldisplay--connections)
-      (let ((x (xcb:connect display)))
-	(setf (gethash display smalldisplay--connections) x)
-	x)))
-
-(defun smalldisplay-list-windows (&optional display)
-  (let* ((x (smalldisplay--connect (or display ":1")))
-	 (root (slot-value (car (slot-value (xcb:get-setup x) 'roots))
-                           'root))
-	 (tree (xcb:+request-unchecked+reply x
-                   (make-instance 'xcb:QueryTree
-                                  :window root))))
-    (prog1
-	(cl-loop for child in (slot-value tree 'children)
-		 collect (cons
-			  child
-			  (cadr
-			   ;; We get back a string (well, vector of
-			   ;; characters) that contains two data points:
-			   ;; First the window class (as the property
-			   ;; name says), and then the name of the
-			   ;; window.  The two parts are terminated by a
-			   ;; NUL character each.
-			   (split-string
-			    (cl-coerce
-			     (slot-value
-			      (xcb:+request-unchecked+reply x
-							    (make-instance 'xcb:GetProperty
-									   :delete 0
-									   :window child
-									   :type xcb:Atom:STRING
-									   :property xcb:Atom:WM_CLASS
-									   :long-length 256
-									   :long-offset 0))
-			      'value)
-			     'string)
-			    (string 0)))))
-      (xcb:flush x))))
 
 (defun smalldisplay-start-server ()
   (start-eval-server "lights" 8703
