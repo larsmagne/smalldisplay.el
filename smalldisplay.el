@@ -641,13 +641,13 @@
 	 (time (decode-time))
 	 (back "black")
 	 (fore "white"))
-    (svg-gradient svg "gradient" 'nope '((0 . "#000080") (100 . "black")))
+    (svg-gradient svg "gradient" 'nope '((0 . "#008000") (100 . "black")))
     (svg-rectangle svg 0 0 dia dia :fill "black")
     (svg-circle svg rad rad rad  :gradient "gradient")
     (dotimes (i 60)
       (svg-line svg 0 0 0 rad
 		:stroke-width "5px"
-		:stroke "red"
+		:stroke "grey"
 		:transform (format "translate(%d,%d) rotate(%d)"
 				   rad rad
 				   (* i (/ 360 60)))))
@@ -661,7 +661,7 @@
 				     rad rad
 				     (* i (/ 360 60))))))
     (svg-circle svg rad rad (- rad 20) :gradient "gradient")
-    (svg-line svg 0 0 0 (+ (- rad) 40)
+    (svg-line svg 0 0 0 (+ (- rad) 60)
 	      :stroke-width "20px"
 	      :stroke fore
 	      :stroke-linecap "round"
@@ -670,7 +670,7 @@
 				 (* (decoded-time-minute time)
 				    (/ 360 60))))
     (svg-line svg 0 0 0 (+ (- rad) 150)
-	      :stroke-width "40px"
+	      :stroke-width "20px"
 	      :stroke fore
 	      :stroke-linecap "round"
 	      :transform (format "translate(%d,%d) rotate(%d)"
@@ -684,12 +684,13 @@
 		     :stroke fore
 		     :fill "grey"))
     (svg-text svg (format "%d" (decoded-time-day time))
-	      :x (- dia 130)
+	      :x (- dia 50)
 	      :y (+ rad 20)
 	      :font-size 60
 	      :stroke "black"
 	      :stroke-width "0px"
 	      :font-weight "bold"
+	      :text-anchor "end"
 	      :fill "grey"
 	      :font-family "futura")
     (svg-text svg (car (smalldisplay--temp))
