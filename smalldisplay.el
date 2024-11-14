@@ -633,7 +633,56 @@
 (defun smalldisplay--run-notifications (track)
   (dolist (func smalldisplay--notifications)
     (funcall func track)))
+
+(defun smalldisplay-clock ()
+  (let* ((dia 700)
+	 (rad (/ dia 2))
+	 (svg (svg-create dia dia))
+	 (time (decode-time)))
+    (svg-rectangle svg 0 0 dia dia :fill "black")
+    (svg-circle svg rad rad rad :fill "red")
+    (dotimes (i 60)
+      (svg-line svg 0 0 0 rad
+		:stroke-width "5px"
+		:stroke "black"
+		:transform (format "translate(%d,%d) rotate(%d)"
+				   rad rad
+				   (* i (/ 360 60)))))
+    (svg-circle svg rad rad (- rad 10) :fill "red")
+    (dotimes (i 60)
+      (when (zerop (% i 5))
+	(svg-line svg 0 0 0 rad
+		  :stroke-width "10px"
+		  :stroke "black"
+		  :transform (format "translate(%d,%d) rotate(%d)"
+				     rad rad
+				     (* i (/ 360 60))))))
+    (svg-circle svg rad rad (- rad 20) :fill "red")
+    (svg-line svg 0 0 0 (+ (- rad) 40)
+	      :stroke-width "20px"
+	      :stroke "black"
+	      :stroke-linecap "round"
+	      :transform (format "translate(%d,%d) rotate(%d)"
+				 rad rad
+				 (* (decoded-time-minute time)
+				    (/ 360 60))))
+    (svg-line svg 0 0 0 (+ (- rad) 120)
+	      :stroke-width "40px"
+	      :stroke "black"
+	      :stroke-linecap "round"
+	      :transform (format "translate(%d,%d) rotate(%d)"
+				 rad rad
+				 (* (+ (decoded-time-hour time)
+				       (/ (decoded-time-minute time) 60.0))
+				    (/ 360 12))))
+    (let ((buf (current-buffer)))
+      (pop-to-buffer "*clock*")
+      (erase-buffer)
+      (insert-image (svg-image svg :scale 1))
+      (insert "\n")
+      (pop-to-buffer buf))))
   
+
 (provide 'smalldisplay)
 
 ;;; smalldisplay.el ends here
