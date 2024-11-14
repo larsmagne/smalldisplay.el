@@ -641,16 +641,17 @@
 	 (time (decode-time))
 	 (back "black")
 	 (fore "white"))
+    (svg-gradient svg "gradient" 'nope '((0 . "#000080") (100 . "black")))
     (svg-rectangle svg 0 0 dia dia :fill "black")
-    (svg-circle svg rad rad rad :fill back)
+    (svg-circle svg rad rad rad  :gradient "gradient")
     (dotimes (i 60)
       (svg-line svg 0 0 0 rad
 		:stroke-width "5px"
-		:stroke fore
+		:stroke "red"
 		:transform (format "translate(%d,%d) rotate(%d)"
 				   rad rad
 				   (* i (/ 360 60)))))
-    (svg-circle svg rad rad (- rad 10) :fill back)
+    (svg-circle svg rad rad (- rad 10) :gradient "gradient")
     (dotimes (i 60)
       (when (zerop (% i 5))
 	(svg-line svg 0 0 0 rad
@@ -659,7 +660,7 @@
 		  :transform (format "translate(%d,%d) rotate(%d)"
 				     rad rad
 				     (* i (/ 360 60))))))
-    (svg-circle svg rad rad (- rad 20) :fill back)
+    (svg-circle svg rad rad (- rad 20) :gradient "gradient")
     (svg-line svg 0 0 0 (+ (- rad) 40)
 	      :stroke-width "20px"
 	      :stroke fore
@@ -677,25 +678,26 @@
 				 (* (+ (decoded-time-hour time)
 				       (/ (decoded-time-minute time) 60.0))
 				    (/ 360 12))))
-    (svg-rectangle svg (- dia 140) (- rad 25) 80 50
-		   :stroke-width "1px"
-		   :stroke fore
-		   :fill back)
+    (when nil
+      (svg-rectangle svg (- dia 160) (- rad 40) 110 80
+		     :stroke-width "0px"
+		     :stroke fore
+		     :fill "grey"))
     (svg-text svg (format "%d" (decoded-time-day time))
-	      :x (- dia 120)
-	      :y (+ rad 15)
-	      :font-size 40
+	      :x (- dia 130)
+	      :y (+ rad 20)
+	      :font-size 60
 	      :stroke "black"
-	      :stroke-width "1px"
+	      :stroke-width "0px"
 	      :font-weight "bold"
-	      :fill "white"
+	      :fill "grey"
 	      :font-family "futura")
     (svg-text svg (car (smalldisplay--temp))
 	      :x 50
-	      :y (+ rad 15)
-	      :font-size 40
+	      :y (+ rad 20)
+	      :font-size 60
 	      :stroke "grey"
-	      :stroke-width "1px"
+	      :stroke-width "0px"
 	      :font-weight "bold"
 	      :fill "grey"
 	      :font-family "futura")
