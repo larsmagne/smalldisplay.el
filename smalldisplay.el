@@ -638,48 +638,73 @@
   (let* ((dia 700)
 	 (rad (/ dia 2))
 	 (svg (svg-create dia dia))
-	 (time (decode-time)))
+	 (time (decode-time))
+	 (back "black")
+	 (fore "white"))
     (svg-rectangle svg 0 0 dia dia :fill "black")
-    (svg-circle svg rad rad rad :fill "red")
+    (svg-circle svg rad rad rad :fill back)
     (dotimes (i 60)
       (svg-line svg 0 0 0 rad
 		:stroke-width "5px"
-		:stroke "black"
+		:stroke fore
 		:transform (format "translate(%d,%d) rotate(%d)"
 				   rad rad
 				   (* i (/ 360 60)))))
-    (svg-circle svg rad rad (- rad 10) :fill "red")
+    (svg-circle svg rad rad (- rad 10) :fill back)
     (dotimes (i 60)
       (when (zerop (% i 5))
 	(svg-line svg 0 0 0 rad
 		  :stroke-width "10px"
-		  :stroke "black"
+		  :stroke fore
 		  :transform (format "translate(%d,%d) rotate(%d)"
 				     rad rad
 				     (* i (/ 360 60))))))
-    (svg-circle svg rad rad (- rad 20) :fill "red")
+    (svg-circle svg rad rad (- rad 20) :fill back)
     (svg-line svg 0 0 0 (+ (- rad) 40)
 	      :stroke-width "20px"
-	      :stroke "black"
+	      :stroke fore
 	      :stroke-linecap "round"
 	      :transform (format "translate(%d,%d) rotate(%d)"
 				 rad rad
 				 (* (decoded-time-minute time)
 				    (/ 360 60))))
-    (svg-line svg 0 0 0 (+ (- rad) 120)
+    (svg-line svg 0 0 0 (+ (- rad) 150)
 	      :stroke-width "40px"
-	      :stroke "black"
+	      :stroke fore
 	      :stroke-linecap "round"
 	      :transform (format "translate(%d,%d) rotate(%d)"
 				 rad rad
 				 (* (+ (decoded-time-hour time)
 				       (/ (decoded-time-minute time) 60.0))
 				    (/ 360 12))))
+    (svg-rectangle svg (- dia 140) (- rad 25) 80 50
+		   :stroke-width "1px"
+		   :stroke fore
+		   :fill back)
+    (svg-text svg (format "%d" (decoded-time-day time))
+	      :x (- dia 120)
+	      :y (+ rad 15)
+	      :font-size 40
+	      :stroke "black"
+	      :stroke-width "1px"
+	      :font-weight "bold"
+	      :fill "white"
+	      :font-family "futura")
+    (svg-text svg (car (smalldisplay--temp))
+	      :x 50
+	      :y (+ rad 15)
+	      :font-size 40
+	      :stroke "grey"
+	      :stroke-width "1px"
+	      :font-weight "bold"
+	      :fill "grey"
+	      :font-family "futura")
     (let ((buf (current-buffer)))
       (pop-to-buffer "*clock*")
       (erase-buffer)
+      (insert "\n   ")
       (insert-image (svg-image svg :scale 1))
-      (insert "\n")
+      (insert "\n\n")
       (pop-to-buffer buf))))
   
 
