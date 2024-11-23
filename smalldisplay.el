@@ -375,7 +375,10 @@
 				    600 200
 				    ,(list (string-remove-suffix
 					    "C"
-					    (car (smalldisplay--temp))))))
+					    ;; Use a smaller minus.
+					    (string-replace
+					     "-" "‐"
+					     (car (smalldisplay--temp)))))))
 				 "/tmp/sleeve-stretch.jpg"))
 	   (write-region (point-min) (point-max) "/tmp/a.png")
 	   (thread-yield)
