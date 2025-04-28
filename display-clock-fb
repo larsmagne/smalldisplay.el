@@ -8,22 +8,13 @@ fi
 
 cd /mnt/tmpfs
 
-# There's three files, because fbi caches if there's fewer files than
-# that.
-cp ~/clock.png 1.png
-cp ~/clock.png 2.png
-cp ~/clock.png 3.png
-cp ~/clock.png clock.png
-
-sudo pkill fbi
-sudo fbi -a --noverbose -T 1 -cachemem 0 -t 1 1.png 2.png 3.png
-
 while true; do
+    if [ -f clock.png ]; then
+	convert clock.png -type truecolor \
+		+flip -strip \
+		-define bmp:subtype=RGB565 \
+		bmp:- | \
+	    tail -c $(( 720 * 720 * 16 / 8 )) > /dev/fb0
+    fi
     sleep $((60 - $(date "+%S")))
-    cp clock.png 11.png
-    cp clock.png 22.png
-    cp clock.png 33.png
-    mv 11.png 1.png
-    mv 22.png 2.png
-    mv 33.png 3.png
 done
