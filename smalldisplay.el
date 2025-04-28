@@ -635,13 +635,14 @@
     (funcall func track)))
 
 (defun smalldisplay-clock ()
-  (let* ((dia 700)
+  (let* ((dia 720)
 	 (rad (/ dia 2))
 	 (svg (svg-create dia dia))
-	 (time (decode-time))
+	 ;; The next time.
+	 (time (decode-time (+ (time-convert (current-time) 'integer) 60)))
 	 (back "black")
 	 (fore "white"))
-    (svg-gradient svg "gradient" 'nope '((0 . "#008000") (100 . "black")))
+    (svg-gradient svg "gradient" 'nope '((0 . "#808000") (100 . "black")))
     (svg-rectangle svg 0 0 dia dia :fill "black")
     (svg-circle svg rad rad rad  :gradient "gradient")
     (dotimes (i 60)
@@ -702,14 +703,23 @@
 	      :font-weight "bold"
 	      :fill "grey"
 	      :font-family "futura")
-    (let ((buf (current-buffer)))
-      (pop-to-buffer "*clock*")
-      (erase-buffer)
-      (insert "\n   ")
-      (insert-image (svg-image svg :scale 1))
-      (insert "\n\n")
-      (pop-to-buffer buf))))
-  
+    (if t
+	(with-temp-buffer
+	  (svg-print svg)
+	  (call-process-region (point-min) (point-max) "rsvg-convert"
+			       t (current-buffer))
+	  (write-region (point-min) (point-max) "/tmp/clock.png" nil 'silent)
+	  (call-process "scp" nil nil nil
+			"-i"
+			(expand-file-name "~/src/smalldisplay.el/round_key")
+			"/tmp/clock.png" "192.168.1.242:/mnt/tmpfs/"))
+      (let ((buf (current-buffer)))
+	(pop-to-buffer "*clock*")
+	(erase-buffer)
+	(insert "\n   ")
+	(insert-image (svg-image svg :scale 1))
+	(insert "\n\n")
+	(pop-to-buffer buf)))))
 
 (provide 'smalldisplay)
 
