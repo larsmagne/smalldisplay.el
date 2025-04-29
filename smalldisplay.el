@@ -698,7 +698,7 @@
 		     :fill "grey"))
     (svg-text svg (format "%s %d"
 			  (elt
-			   '("Sun" "Mon" "Tue" "Wed" "Thu" "Fri" "Sat")
+			   '("Dim" "Lun" "Mar" "Mer" "Jeu" "Ven" "Sam")
 			   (decoded-time-weekday time))
 			  (decoded-time-day time))
 	      :x (- dia 50)
