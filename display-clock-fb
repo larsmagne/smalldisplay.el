@@ -2,6 +2,9 @@
 
 if [ ! -d /mnt/tmpfs ]; then
     sudo mkdir /mnt/tmpfs
+fi
+
+if ! df /mnt/tmpfs/ | grep tmpfs > /dev/null; then
     sudo mount -t tmpfs none /mnt/tmpfs
     sudo chown larsi:users /mnt/tmpfs
 fi
