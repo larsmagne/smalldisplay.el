@@ -1,5 +1,7 @@
 #!/bin/bash
 
+# Create a tmpfs file system for the clock images (to avoid SD card
+# churn).
 if [ ! -d /mnt/tmpfs ]; then
     sudo mkdir /mnt/tmpfs
 fi
@@ -11,8 +13,11 @@ fi
 
 cd /mnt/tmpfs
 
+# Loop forever, waking up once a minute (at :00) to output a new clock
+# face (pushed there from the server earlier, but with the correct time).
 while true; do
     if [ -f clock.png ]; then
+	# 16 bit display.
 	convert clock.png -type truecolor \
 		+flip -strip \
 		-define bmp:subtype=RGB565 \
