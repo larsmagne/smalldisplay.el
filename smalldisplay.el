@@ -650,7 +650,7 @@
   (let* ((dia 720)
 	 (rad (/ dia 2))
 	 (svg (svg-create dia dia))
-	 ;; The next time.
+	 ;; The next minute -- we're generating in advance.
 	 (time (decode-time (+ (time-convert (current-time) 'integer) 60)))
 	 (back "black")
 	 (fore "white"))
