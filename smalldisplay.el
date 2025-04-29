@@ -637,7 +637,16 @@
   (dolist (func smalldisplay--notifications)
     (funcall func track)))
 
-(defun smalldisplay-clock ()
+(defun smalldisplay--next-clock ()
+  (+ (- 60 (% (time-convert (current-time) 'integer) 60)) 30))
+
+(defun smalldisplay-clock-runner ()
+  (run-at-time (smalldisplay--next-clock) nil
+	       (lambda ()
+		 (smalldisplay-clock)
+		 (smalldisplay-clock-runner))))
+
+(defun smalldisplay-clock (&optional testing)
   (let* ((dia 720)
 	 (rad (/ dia 2))
 	 (svg (svg-create dia dia))
@@ -645,7 +654,7 @@
 	 (time (decode-time (+ (time-convert (current-time) 'integer) 60)))
 	 (back "black")
 	 (fore "white"))
-    (svg-gradient svg "gradient" 'nope '((0 . "#808000") (100 . "black")))
+    (svg-gradient svg "gradient" 'nope '((0 . "#000080") (100 . "black")))
     (svg-rectangle svg 0 0 dia dia :fill "black")
     (svg-circle svg rad rad rad  :gradient "gradient")
     (dotimes (i 60)
@@ -687,7 +696,11 @@
 		     :stroke-width "0px"
 		     :stroke fore
 		     :fill "grey"))
-    (svg-text svg (format "%d" (decoded-time-day time))
+    (svg-text svg (format "%s %d"
+			  (elt
+			   '("Sun" "Mon" "Tue" "Wed" "Thu" "Fri" "Sat")
+			   (decoded-time-weekday time))
+			  (decoded-time-day time))
 	      :x (- dia 50)
 	      :y (+ rad 20)
 	      :font-size 60
@@ -697,7 +710,7 @@
 	      :text-anchor "end"
 	      :fill "grey"
 	      :font-family "futura")
-    (svg-text svg (car (smalldisplay--temp))
+    (svg-text svg (replace-regexp-in-string "C$" "" (car (smalldisplay--temp)))
 	      :x 50
 	      :y (+ rad 20)
 	      :font-size 60
@@ -706,23 +719,18 @@
 	      :font-weight "bold"
 	      :fill "grey"
 	      :font-family "futura")
-    (if t
-	(with-temp-buffer
-	  (svg-print svg)
-	  (call-process-region (point-min) (point-max) "rsvg-convert"
-			       t (current-buffer))
-	  (write-region (point-min) (point-max) "/tmp/clock.png" nil 'silent)
-	  (call-process "scp" nil nil nil
-			"-i"
-			(expand-file-name "~/src/smalldisplay.el/round_key")
-			"/tmp/clock.png" "192.168.1.242:/mnt/tmpfs/"))
-      (let ((buf (current-buffer)))
-	(pop-to-buffer "*clock*")
-	(erase-buffer)
-	(insert "\n   ")
-	(insert-image (svg-image svg :scale 1))
-	(insert "\n\n")
-	(pop-to-buffer buf)))))
+    (with-temp-buffer
+      (svg-print svg)
+      (call-process-region (point-min) (point-max) "rsvg-convert"
+			   t (current-buffer))
+      (write-region (point-min) (point-max) "/stage/tmp/clock.png"
+		    nil 'silent)
+      (call-process
+       "scp" nil nil nil
+       "-i" (expand-file-name "~/src/smalldisplay.el/round_key")
+       "/stage/tmp/clock.png" "192.168.1.242:/mnt/tmpfs/"))
+    (when testing
+      (find-file "/stage/tmp/clock.png"))))
 
 (provide 'smalldisplay)
 
