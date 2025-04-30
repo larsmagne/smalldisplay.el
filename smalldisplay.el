@@ -646,6 +646,8 @@
 		 (smalldisplay-clock)
 		 (smalldisplay-clock-runner))))
 
+(defvar smalldisplay--scp-process nil)
+
 (defun smalldisplay-clock (&optional testing)
   (let* ((dia 720)
 	 (rad (/ dia 2))
@@ -725,10 +727,13 @@
 			   t (current-buffer))
       (write-region (point-min) (point-max) "/stage/tmp/clock.png"
 		    nil 'silent)
-      (call-process
-       "scp" nil nil nil
-       "-i" (expand-file-name "~/src/smalldisplay.el/round_key")
-       "/stage/tmp/clock.png" "192.168.1.242:/mnt/tmpfs/"))
+      (when smalldisplay--scp-process
+	(delete-process smalldisplay--scp-process))
+      (setq smalldisplay--scp-process
+	    (start-process
+	     "scp" nil
+	     "scp" "-i" (expand-file-name "~/src/smalldisplay.el/round_key")
+	     "/stage/tmp/clock.png" "192.168.1.242:/mnt/tmpfs/")))
     (when testing
       (find-file "/stage/tmp/clock.png"))))
 
