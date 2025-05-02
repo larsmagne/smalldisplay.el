@@ -159,7 +159,8 @@
   ;; Run once a minute to get temp updates.  amp updates will be
   ;; triggered via `smalldisplay-notify'.
   (run-at-time 1 60 #'smalldisplay-perhaps-display-rocket-sam)
-  (run-at-time 600 600 #'smalldisplay-frame))
+  (run-at-time 600 600 #'smalldisplay-frame)
+  (smalldisplay-clock-runner))
 
 (defvar smalldisplay--last-update nil)
 (defun smalldisplay-perhaps-display-rocket-sam ()
