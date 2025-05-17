@@ -17,12 +17,18 @@ cd /mnt/tmpfs
 # face (pushed there from the server earlier, but with the correct time).
 while true; do
     if [ -f clock.png ]; then
+	type=RGB565
+	# If the clock file is old, then indicate that by splatting
+	# the face with the wrong bit order.
+	if test `find clock.png -mmin +5 > /dev/null`; then
+	    type=RGB655
+	fi
 	# 16 bit display.
-	convert clock.png -type truecolor \
-		+flip -strip \
-		-define bmp:subtype=RGB565 \
-		bmp:- | \
-	    tail -c $(( 720 * 720 * 16 / 8 )) > /dev/fb0
+        convert clock.png -type truecolor \
+                +flip -strip \
+                -define bmp:subtype=$type \
+                bmp:- | \
+            tail -c $(( 720 * 720 * 16 / 8 )) > /dev/fb0
     fi
     sleep $((60 - $(date "+%S")))
 done
