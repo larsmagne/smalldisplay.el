@@ -27,6 +27,7 @@
 
 (require 'svg)
 (require 'eval-server)
+(require 'movie)
 
 (defun smalldisplay-image-size (file)
   (with-temp-buffer
@@ -320,8 +321,7 @@
 (defun smalldisplay-make-dielman4-image ()
   (with-temp-buffer
     (set-buffer-multibyte nil)
-    (let ((track (smalldisplay--track))
-	  (name "/var/www/html/smalldisplay/image-dielman4-1280-800.png"))
+    (let ((name "/var/www/html/smalldisplay/image-dielman4-1280-800.png"))
       (insert (smalldisplay '(1280 . 800)
 			    `((top-left -30 260 ,(smalldisplay--track)))
 			    (expand-file-name
@@ -565,65 +565,44 @@
    " "))
 
 (defun smalldisplay-text (svg size texts &rest args)
-  (cl-loop for (position y font-size strings . no-border) in texts
-	   do (if no-border
-		  (apply
-		   'smalldisplay-svg-multi-line-text
-		   svg strings
-		   :text-anchor
-		   (if (memq position '(top-right bottom-right
-						  top-right-rotated))
-		       "end"
-		     "start")
-		   :x (if (memq position '(top-right bottom-right
-						     top-right-rotated))
-			  (- (car size) 20)
-			20)
-		   :y y
-		   :font-size font-size
-		   :font-weight "bold"
-		   :fill "white"
-		   :font-family "futura"
-		   (if (eq position 'top-right-rotated)
-		       `(:transform: "translateX(-50%) translateY(-50%)"
-				     ,@args)
-		     args))
-		(cl-loop for stroke in (list (max (/ font-size 16) 2) 1)
-			 do (apply
-			     'smalldisplay-svg-multi-line-text
-			     svg strings
-			     :text-anchor
-			     (if (memq position '(top-right bottom-right))
-				 "end"
-			       "start")
-			     :x (cond
-				 ((memq position '(top-right
-						   bottom-right
-						   top-right-rotated))
-				  (- (car size) 20))
-				 ((eq position 'top-left)
-				  20)
-				 (t
-				  0))
-			     :y (or y
-				    (if (memq position '(bottom-left
-							 bottom-right))
-					(- (cdr size) (* (length texts) 100)
-					   20)
-				      20))
-			     :font-size font-size
-			     :stroke "black"
-			     :stroke-width (format "%dpx" stroke)
-			     :font-weight "bold"
-			     :fill "white"
-			     :font-family "futura"
-			     (if (eq position 'top-right-rotated)
-				 `(:transform
-				   ,(format "translate(%s,-%s) rotate(90)"
-					    (- (car size) 20)
-					    (- (cdr size) 40))
-				   ,@args)
-			       args))))))
+  (cl-loop with filter = (svg-outline svg 3 "black" 1)
+	   for (position y font-size strings . no-border) in texts
+	   do (apply
+	       'smalldisplay-svg-multi-line-text
+	       svg strings
+	       :text-anchor
+	       (if (memq position '(top-right bottom-right))
+		   "end"
+		 "start")
+	       :x (cond
+		   ((memq position '(top-right
+				     bottom-right
+				     top-right-rotated))
+		    (- (car size) 20))
+		   ((eq position 'top-left)
+		    20)
+		   (t
+		    0))
+	       :y (or y
+		      (if (memq position '(bottom-left
+					   bottom-right))
+			  (- (cdr size) (* (length texts) 100)
+			     20)
+			20))
+	       :font-size font-size
+	       :stroke "black"
+	       :stroke-width 0
+	       :font-weight "bold"
+	       :fill "white"
+	       :font-family "futura"
+	       :filter (if no-filter "" filter)
+	       (if (eq position 'top-right-rotated)
+		   `(:transform
+		     ,(format "translate(%s,-%s) rotate(90)"
+			      (- (car size) 20)
+			      (- (cdr size) 40))
+		     ,@args)
+		 args))))
 
 (defun smalldisplay-start-server ()
   (start-eval-server "lights" 8703
@@ -655,7 +634,6 @@
 	 (svg (svg-create dia dia))
 	 ;; The next minute -- we're generating in advance.
 	 (time (decode-time (+ (time-convert (current-time) 'integer) 60)))
-	 (back "black")
 	 (fore "white"))
     (svg-gradient svg "gradient" 'nope '((0 . "#000080") (100 . "black")))
     (svg-rectangle svg 0 0 dia dia :fill "black")
