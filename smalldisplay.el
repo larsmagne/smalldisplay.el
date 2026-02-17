@@ -27,7 +27,7 @@
 
 (require 'svg)
 (require 'eval-server)
-(require 'movie)
+(require 'svg-aux)
 
 (defun smalldisplay-image-size (file)
   (with-temp-buffer
