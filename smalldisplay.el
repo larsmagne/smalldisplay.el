@@ -77,18 +77,6 @@
 			   t (current-buffer))
       (buffer-string))))
 
-(defun smalldisplay-svg-multi-line-text (svg texts &rest args)
-  "Add TEXT to SVG."
-  (let ((a (svg--arguments svg args)))
-    (svg--append
-     svg
-     (apply
-      'dom-node 'text `(,@a)
-      (cl-loop for text in texts
-	       collect (dom-node 'tspan `((dy . "1.0em")
-					  (x . ,(cdr (assoc 'x a))))
-				 (svg--encode-text text)))))))
-
 (defun smalldisplay--temp ()
   (with-current-buffer (url-retrieve-synchronously
 			"http://rocket-sam/get-data.php")
@@ -441,9 +429,8 @@
     (when nil
       (svg-rectangle svg 0 0 (car size) (cdr size)
 		     :fill "#000001"))
-    (smalldisplay-svg-path
-     svg
-     :d (smalldisplay-path rain)
+    (svg-smooth-line
+     svg rain
      :stroke-width 7
      :fill "none"
      :stroke "white")
@@ -517,58 +504,11 @@
       (setq smalldisplay-rain rain)
       rain)))
 
-(defun smalldisplay-line (a b)
-  (let ((length-x (- (car b) (car a)))
-	(length-y (- (cdr b) (cdr a))))
-    (list :length (sqrt (+ (expt length-x 2) (expt length-y 2)))
-	  :angle (atan length-y length-x))))
-
-(defun smalldisplay-control-point (current previous next reverse)
-  (let* ((previous (or previous current))
-	 (next (or next current))
-	 (line (smalldisplay-line previous next))
-	 (angle (+ (cl-getf line :angle)
-		   (if reverse
-		       float-pi
-		     0)))
-	 (smoothing 0.2)
-	 (length (* (cl-getf line :length) smoothing)))
-    (cons (+ (car current) (* (cos angle) length))
-	  (+ (cdr current) (* (sin angle) length)))))
-
-(defun smalldisplay-bezier (i points)
-  (let ((cps (smalldisplay-control-point (elt points (- i 1))
-					 (elt points (- i 2))
-					 (elt points i)
-					 nil))
-	(cpe (smalldisplay-control-point (elt points i)
-					 (elt points (1- i))
-					 (elt points (1+ i))
-					 t)))
-    (format "C %s,%s %s,%s %s,%s"
-	    (car cps) (cdr cps)
-	    (car cpe) (cdr cpe)
-	    (car (elt points i)) (cdr (elt points i)))))
-
-(defun smalldisplay-svg-path (svg &rest args)
-  "Add TEXT to SVG."
-  (svg--append svg (dom-node 'path `(,@(svg--arguments svg args)))))
-
-(defun smalldisplay-path (points)
-  (mapconcat
-   #'identity
-   (cl-loop for point in points
-	    for i from 0
-	    collect (if (zerop i)
-			(format "M %s,%s" (car point) (cdr point))
-		      (smalldisplay-bezier i points)))
-   " "))
-
 (defun smalldisplay-text (svg size texts &rest args)
   (cl-loop with filter = (svg-outline svg 3 "black" 1)
 	   for (position y font-size strings . no-border) in texts
 	   do (apply
-	       'smalldisplay-svg-multi-line-text
+	       'svg-multi-line-text
 	       svg strings
 	       :text-anchor
 	       (if (memq position '(top-right bottom-right))
