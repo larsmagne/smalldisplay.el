@@ -535,7 +535,7 @@
 	       :font-weight "bold"
 	       :fill "white"
 	       :font-family "futura"
-	       :filter (if no-filter "" filter)
+	       :filter (if no-border "" filter)
 	       (if (eq position 'top-right-rotated)
 		   `(:transform
 		     ,(format "translate(%s,-%s) rotate(90)"
