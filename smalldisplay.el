@@ -164,6 +164,7 @@
     (setq smalldisplay--current-track track))
   (smalldisplay-make-dielman1-image)
   (smalldisplay-make-dielman4-image)
+  (smalldisplay-make-clock-image)
   (ignore-errors
     (eval-at-async "lights" "dielman1" 8703 `(smalldisplay-notify)))
   (ignore-errors
@@ -317,6 +318,15 @@
 					   (smalldisplay--current)))))
       (write-region (point-min) (point-max) (concat name ".tmp"))
       (rename-file (concat name ".tmp") name t))))
+
+(defun smalldisplay-make-clock-image ()
+  (call-process "convert" nil nil nil
+		(expand-file-name
+		 "sleeve.jpg" (file-name-directory
+			       (smalldisplay--current)))
+		"-gravity" "center" "-crop" "1:1" "+repage"
+		"-resize" "720x720"
+		"/var/www/html/smalldisplay/sleeve720.png"))
 
 (require 'seq)
 
@@ -655,6 +665,26 @@
 	     "/stage/tmp/clock.png" "192.168.1.242:/mnt/tmpfs/")))
     (when testing
       (find-file "/stage/tmp/clock.png"))))
+
+(defun smalldisplay-start-seeedframe-monitoring ()
+  (with-current-buffer (get-buffer-create " *seeedframe*")
+    (make-process
+     :name "ping seeedframe"
+     :buffer (current-buffer)
+     :command (list "ping" "192.168.1.220")
+     :filter
+     (lambda (proc string)
+       (with-current-buffer (process-buffer proc)
+	 (goto-char (point-max))
+	 (insert string)
+	 (when (bolp)
+	   (forward-line -1)
+	   (when (looking-at ".*time=[.0-9]+ ms$")
+	     (smalldisplay-upload-seeedframe))
+	   (erase-buffer)))))))
+
+(defun smalldisplay-upload-seeedframe ()
+  )
 
 (provide 'smalldisplay)
 
