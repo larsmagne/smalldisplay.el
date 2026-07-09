@@ -331,16 +331,8 @@
 (require 'seq)
 
 (defun smalldisplay-frame ()
-  (let* ((files (seq-remove
-		 (lambda (file)
-		   (string-match "[0-9]+x[0-9]+\\|scaled" file))
-		 (directory-files-recursively
-		  "/var/tmp/uploads" "shot.*[.]jpg\\'")))
-	 (file (nth (random (length files)) files)
-	       ;;(nth 1300 files)
-	       ))
-    (setq file (expand-file-name
-		"sleeve.jpg" (file-name-directory (smalldisplay--current))))
+  (let* ((file (expand-file-name
+		"sleeve.jpg" (file-name-directory (smalldisplay--current)))))
     (call-process "convert" nil nil nil
 		  "-trim" "-fuzz" "10%"
 		  file "/tmp/trim.jpg")
@@ -666,25 +658,43 @@
     (when testing
       (find-file "/stage/tmp/clock.png"))))
 
-(defun smalldisplay-start-seeedframe-monitoring ()
-  (with-current-buffer (get-buffer-create " *seeedframe*")
-    (make-process
-     :name "ping seeedframe"
-     :buffer (current-buffer)
-     :command (list "ping" "192.168.1.220")
-     :filter
-     (lambda (proc string)
-       (with-current-buffer (process-buffer proc)
-	 (goto-char (point-max))
-	 (insert string)
-	 (when (bolp)
-	   (forward-line -1)
-	   (when (looking-at ".*time=[.0-9]+ ms$")
-	     (smalldisplay-upload-seeedframe))
-	   (erase-buffer)))))))
-
-(defun smalldisplay-upload-seeedframe ()
-  )
+(defun smalldisplay-seeedframe ()
+  (let ((file (expand-file-name
+	       "sleeve.jpg" (file-name-directory (smalldisplay--current)))))
+    (set-process-sentinel
+     ;; This is very slow, so do it in the background.
+     (start-process "sharp" (get-buffer-create "*sharp*")
+		    "sharp"
+		    "-m" "1" "-f" "10"
+		    file "/tmp/seeedframe-sharp.jpg")
+     (lambda (proc _change)
+       (unless (process-live-p proc)
+	 (with-temp-buffer
+	   (set-buffer-multibyte nil)
+	   (insert-file-contents-literally "/tmp/seeedframe-sharp.jpg")
+	   (call-process-region (point-min) (point-max)
+				"convert"
+				t (current-buffer) nil
+				"jpg:-"
+				"-resize" "1200x1600^"
+				"-gravity" "Center"
+				"-extent" "1200x1600"
+				"-level" "0%,80%"
+				"-contrast-stretch" "0.0x5.0%"
+				"/tmp/seeedframe-stretch.jpg")
+	   (insert (smalldisplay '(1200 . 1600)
+				 `((top-right
+				    20 200
+				    ,(list (string-remove-suffix
+					    "C"
+					    ;; Use a smaller minus.
+					    (string-replace
+					     "-" "‐"
+					     (car (smalldisplay--temp)))))))
+				 "/tmp/seeedframe-stretch.jpg"))
+	   (write-region
+	    (point-min) (point-max)
+	    "/var/www/html/smalldisplay/image-seeedframe.png")))))))
 
 (provide 'smalldisplay)
 
