@@ -28,6 +28,7 @@
 (require 'svg)
 (require 'eval-server)
 (require 'svg-aux)
+(require 'icalendar)
 
 (defun smalldisplay-image-size (file)
   (with-temp-buffer
@@ -749,8 +750,18 @@
       (insert "\n\n")
       (when-let ((window (get-buffer-window nil t)))
 	(set-window-point window (point-max))))))
-	
-			 
+
+
+(defvar smalldisplay-calendar-url nil)
+
+(defun smalldislay-get-calendar (url)
+  (with-current-buffer (url-retrieve-synchronously url)
+    (goto-char (point-min))
+    (prog1
+	(when (search-forward "\n\n" nil t)
+	  (decode-coding-region (point) (point-max) 'utf-8)
+	  (icalendar--read-element nil nil))
+      (kill-buffer (current-buffer)))))
 
 (provide 'smalldisplay)
 
