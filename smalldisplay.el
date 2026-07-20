@@ -165,6 +165,7 @@
   (smalldisplay-make-dielman1-image)
   (smalldisplay-make-dielman4-image)
   (smalldisplay-make-clock-image)
+  (smalldisplay-seeedframe)
   (ignore-errors
     (eval-at-async "lights" "dielman1" 8703 `(smalldisplay-notify)))
   (ignore-errors
@@ -659,42 +660,97 @@
       (find-file "/stage/tmp/clock.png"))))
 
 (defun smalldisplay-seeedframe ()
-  (let ((file (expand-file-name
-	       "sleeve.jpg" (file-name-directory (smalldisplay--current)))))
-    (set-process-sentinel
-     ;; This is very slow, so do it in the background.
-     (start-process "sharp" (get-buffer-create "*sharp*")
-		    "sharp"
-		    "-m" "1" "-f" "10"
-		    file "/tmp/seeedframe-sharp.jpg")
-     (lambda (proc _change)
-       (unless (process-live-p proc)
-	 (with-temp-buffer
-	   (set-buffer-multibyte nil)
-	   (insert-file-contents-literally "/tmp/seeedframe-sharp.jpg")
-	   (call-process-region (point-min) (point-max)
-				"convert"
-				t (current-buffer) nil
-				"jpg:-"
-				"-resize" "1200x1600^"
-				"-gravity" "Center"
-				"-extent" "1200x1600"
-				"-level" "0%,80%"
-				"-contrast-stretch" "0.0x5.0%"
-				"/tmp/seeedframe-stretch.jpg")
-	   (insert (smalldisplay '(1200 . 1600)
-				 `((top-right
-				    20 200
-				    ,(list (string-remove-suffix
-					    "C"
-					    ;; Use a smaller minus.
-					    (string-replace
-					     "-" "‐"
-					     (car (smalldisplay--temp)))))))
-				 "/tmp/seeedframe-stretch.jpg"))
-	   (write-region
-	    (point-min) (point-max)
-	    "/var/www/html/smalldisplay/image-seeedframe.png")))))))
+  (with-temp-buffer
+    (set-buffer-multibyte nil)
+    (insert (smalldisplay '(1200 . 1600)
+			  `((top-right
+			     20 200
+			     ,(list (string-remove-suffix
+				     "C"
+				     ;; Use a smaller minus.
+				     (string-replace
+				      "-" "‐"
+				      (car (smalldisplay--temp)))))))
+			  (expand-file-name
+			   "sleeve.jpg" (file-name-directory
+					 (smalldisplay--current)))))
+    (write-region
+     (point-min) (point-max)
+     "/var/www/html/smalldisplay/image-seeedframe-pre.png")
+    (call-process "~/src/seeedframe/photoframe-upload.sh" nil nil nil
+		  "/var/www/html/smalldisplay/image-seeedframe-pre.png"
+		  "--file"
+		  "/var/www/html/smalldisplay/image-seeedframe.png")))
+
+(defun smalldisplay-calstation ()
+  (interactive)
+  (let* ((width 1200)
+	 (height 1600)
+	 (margin 50)
+	 (svg (svg-create width height)))
+    (svg-rectangle svg 0 0 width height
+		   :fill "#103010")
+    ;; Find the start date.  We want a Monday two weeks before the
+    ;; current month.
+    (let* ((now (time-convert (current-time) 'integer))
+	   (time (decode-time now))
+	   (ctop 1000)
+	   (hstride 60)
+	   (wstride 100))
+      (setf (decoded-time-day time) 1)
+      (setq time (decoded-time-add time (make-decoded-time :day -7)))
+      (cl-loop while (> (decoded-time-weekday (decode-time (encode-time time)))
+			1)
+	       do (setq time (decoded-time-add
+			      time (make-decoded-time :day -1))))
+      (cl-loop for week from 0 upto 8
+	       do
+	       (svg-line svg margin (+ ctop (* week hstride))
+			 (+ margin (* wstride 7)) (+ ctop (* week hstride))
+			 :stroke-width 2
+			 :stroke-color "white"))
+      (cl-loop for day from 0 upto 7
+	       do
+	       (svg-line svg
+			 (+ margin (* day wstride)) ctop
+			 (+ margin (* day wstride)) (+ ctop (* 8 hstride))
+			 :stroke-width 2
+			 :stroke-color "white"))
+      (cl-loop for day from 0 upto (1- (* 7 8))
+	       do
+	       (when (and (= (decoded-time-month time)
+			     (decoded-time-month (decode-time  now)))
+			  (= (decoded-time-day time)
+			     (decoded-time-day (decode-time  now))))
+		 (svg-rectangle svg
+				(+ 1 margin (* (mod day 7) wstride))
+				(+ 1 ctop (* (/ day 7) hstride))
+				(- wstride 2)
+				(- hstride 2)
+				:fill-color "red"))
+	       (svg-text svg (format "%d" (decoded-time-day time))
+			 :x (+ margin (- wstride 8) (* (mod day 7) wstride))
+			 :y (+ 30 ctop (* (/ day 7) hstride))
+			 :font-size 25
+			 :text-anchor "end"
+			 :font-weight (if (member (mod day 7) '(5 6))
+					  "bold"
+					"normal")
+			 :fill (if (= (decoded-time-month time)
+				      (decoded-time-month (decode-time now)))
+				   "white"
+				 "grey")
+			 :font-family "futura")
+	       (setq time (decoded-time-add time (make-decoded-time :day 1))))
+      )
+    (with-current-buffer (get-buffer-create "*calstation*")
+      (erase-buffer)
+      (insert-image (svg-image svg :max-width 1100))
+      (insert "\n\n")
+      (when-let ((window (get-buffer-window nil t)))
+	(set-window-point window (point-max))))))
+	
+			 
 
 (provide 'smalldisplay)
 
