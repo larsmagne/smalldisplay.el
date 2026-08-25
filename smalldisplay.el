@@ -685,6 +685,8 @@
 
 (defun smalldisplay-calstation ()
   (interactive)
+  (unless smalldisplay-calendar-entries
+    (smalldisplay-get-calendar))
   (let* ((width 1200)
 	 (height 1600)
 	 (margin 50)
@@ -858,6 +860,35 @@
 	   :font-weight "normal"
 	   :fill "black"
 	   :font-family "Coconino County"))
+
+	;; Weather.
+	(let ((wheight 500)
+	      (wtop 410))
+	  (svg-rectangle svg margin wtop
+			 (- width (* margin 2)) wheight
+			 :stroke-width "2px"
+			 :stroke-color "black"
+			 :fill "#9ba87b")
+	  (cl-loop for x from 0 upto 24
+		   with stride = (/ (- width (* margin 2)) 24.0)
+		   do
+		   (svg-line svg
+			     (+ margin (* stride x))
+			     (+ wtop wheight)
+			     (+ margin (* stride x))
+			     (+ wtop wheight 10)
+			     :stroke-width 1
+			     :stroke-color "black")
+		   (when (< x 25)
+		   (svg-text
+		    svg (format "%02d" x)
+		    :x (+ margin (* stride x))
+		    :y (+ wtop wheight 30)
+		    :font-size 20
+		    :text-anchor "middle"
+		    :font-weight "normal"
+		    :fill "black"
+		    :font-family "Coconino County"))))
 	)
     (with-current-buffer (get-buffer-create "*calstation*")
       (erase-buffer)
@@ -877,7 +908,7 @@
 (defvar smalldisplay-calendar-url nil)
 (defvar smalldisplay-calendar-entries nil)
 
-(defun smalldislay-get-calendar ()
+(defun smalldisplay-get-calendar ()
   (setq
    smalldisplay-calendar-entries
    (with-current-buffer (url-retrieve-synchronously smalldisplay-calendar-url)
