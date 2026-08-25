@@ -748,7 +748,7 @@
 				      (decoded-time-month (decode-time now)))
 				   "black"
 				 "grey")
-			 :font-family "Harriman")
+			 :font-family "Coconino County")
 	       (cl-loop for event in (smalldisplay-calendar-entries time)
 			for i from 0
 			for text =
@@ -768,7 +768,7 @@
 				      (decoded-time-month (decode-time now)))
 				   "black"
 				 "grey")
-			 :font-family "Harriman"))
+			 :font-family "Coconino County"))
 	       (setq time (decoded-time-add time (make-decoded-time :day 1))))
 
 	(svg-embed svg
@@ -786,6 +786,7 @@
 	;; Heading.
 	(cl-loop with wstart = margin
 		 with hstart = 200
+		 with hwidth = (- width 210)
 		 for (size color) in '((15 "black")
 				       (20 "#ffff87")
 				       (2 "black")
@@ -793,14 +794,14 @@
 				       (2 "black"))
 		 do
 		 (svg-rectangle svg wstart wstart
-				(- width (* wstart 2))
+				(- hwidth (* wstart 2))
 				hstart
 				:fill color)
 		 (cl-incf wstart size)
 		 (cl-decf hstart (* size 2))
 		 finally
 		 (svg-rectangle svg wstart wstart
-				(- width (* wstart 2))
+				(- hwidth (* wstart 2))
 				hstart
 				:fill "#d36863")
 		 (svg-text
@@ -816,13 +817,47 @@
 				   "novembre" "decembre")
 				 (decoded-time-month dnow))
 			    (decoded-time-year dnow)))
-		  :x (/ width 2)
+		  :x (/ hwidth 2)
 		  :y (+ wstart 80)
 		  :font-size 60
 		  :text-anchor "middle"
 		  :font-weight "normal"
 		  :fill "black"
-		  :font-family "Harriman"))
+		  :font-family "Coconino County"))
+	;; Temperature summary.
+	(svg-rectangle svg 950 margin
+		       200 200
+		       :fill "black")
+	(svg-rectangle svg 952 (+ margin 2)
+		       196 196
+		       :fill "#ffff87")
+	(let ((summary (smalldisplay-weather-summary
+			(smalldisplay-weather-data (format-time-string "%F")))))
+	  (svg-embed svg (expand-file-name "~/src/smalldisplay.el/roundthing1.png")
+		     "image/png" nil
+		     :x (- width margin 170)
+		     :y 110
+		     :height "75px")
+	  (svg-text
+	   svg (format "%d°-%d°"
+		       (plist-get summary :min-temp)
+		       (plist-get summary :max-temp))
+	   :x (- width margin (/ 200 2))
+	   :y (+ margin 50)
+	   :font-size 40
+	   :text-anchor "middle"
+	   :font-weight "normal"
+	   :fill "black"
+	   :font-family "Coconino County")
+	  (svg-text
+	   svg (format "%dmm" (plist-get summary :rain))
+	   :x (- width margin (/ 200 2))
+	   :y (+ margin 180)
+	   :font-size 40
+	   :text-anchor "middle"
+	   :font-weight "normal"
+	   :fill "black"
+	   :font-family "Coconino County"))
 	)
     (with-current-buffer (get-buffer-create "*calstation*")
       (erase-buffer)
@@ -852,6 +887,41 @@
 	   (decode-coding-region (point) (point-max) 'utf-8)
 	   (icalendar--read-element nil nil))
        (kill-buffer (current-buffer))))))
+
+(defvar smalldisplay-weather-data nil)
+
+(defun smalldisplay-get-weather-data ()
+  (with-current-buffer
+      (url-retrieve-synchronously
+       "https://api.met.no/weatherapi/locationforecast/2.0/classic?lon=10.744587373145249&lat=59.92675174365245"
+       nil nil 30)
+    (goto-char (point-min))
+    (prog1
+	(and (search-forward "\n\n" nil t)
+	     (libxml-parse-xml-region (point) (point-max)))
+      (kill-buffer (current-buffer)))))
+
+(defun smalldisplay-weather-data (date)
+  (cl-loop for point in (dom-by-tag (or smalldisplay-weather-data
+					(setq smalldisplay-weather-data
+					      (smalldisplay-get-weather-data)))
+				    'time)
+	   when (equal (substring (dom-attr point 'from) 0 10) date)
+	   collect point))
+
+(defun smalldisplay-weather-summary (weather)
+  (cl-loop for elem in weather
+	   for temp = (dom-attr (dom-by-tag elem 'temperature) 'value)
+	   for rain = (dom-attr (dom-by-tag elem 'precipitation) 'value)
+	   when temp
+	   maximize (string-to-number temp) into max-temp
+	   when temp
+	   minimize (string-to-number temp) into min-temp
+	   when rain
+	   sum (string-to-number rain) into rain-total
+	   finally (return (list :max-temp max-temp
+				 :min-temp min-temp
+				 :rain rain-total))))
 
 (provide 'smalldisplay)
 
