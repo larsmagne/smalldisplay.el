@@ -782,6 +782,47 @@
 		   ;; Show the center part of the image.
 		   :x 50
 		   :y 1410)
+
+	;; Heading.
+	(cl-loop with wstart = margin
+		 with hstart = 200
+		 for (size color) in '((15 "black")
+				       (20 "#ffff87")
+				       (2 "black")
+				       (2 "white")
+				       (2 "black"))
+		 do
+		 (svg-rectangle svg wstart wstart
+				(- width (* wstart 2))
+				hstart
+				:fill color)
+		 (cl-incf wstart size)
+		 (cl-decf hstart (* size 2))
+		 finally
+		 (svg-rectangle svg wstart wstart
+				(- width (* wstart 2))
+				hstart
+				:fill "#d36863")
+		 (svg-text
+		  svg
+		  (let ((dnow (decode-time now)))
+		    (format "%s %d %s %d"
+			    (elt '("lundi" "mardi" "mercredi" "jeudi"
+				   "vendredi" "samedi" "dimanche")
+				 (1- (decoded-time-weekday dnow)))
+			    (decoded-time-day dnow)
+			    (elt '("" "janvier" "fevrier" "mars" "avril" "mai"
+				   "june" "juillet" "ôut" "september" "octobre"
+				   "novembre" "decembre")
+				 (decoded-time-month dnow))
+			    (decoded-time-year dnow)))
+		  :x (/ width 2)
+		  :y (+ wstart 80)
+		  :font-size 60
+		  :text-anchor "middle"
+		  :font-weight "normal"
+		  :fill "black"
+		  :font-family "Harriman"))
 	)
     (with-current-buffer (get-buffer-create "*calstation*")
       (erase-buffer)
