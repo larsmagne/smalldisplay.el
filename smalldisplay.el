@@ -884,18 +884,11 @@
 	  (cl-loop for x from 0 upto 24
 		   with stride = (/ (- width (* margin 2)) 24.0)
 		   do
-		   (svg-line svg
-			     (+ margin (* stride x))
-			     (+ wtop wheight)
-			     (+ margin (* stride x))
-			     (+ wtop wheight -10)
-			     :stroke-width 1
-			     :stroke-color "black")
 		   (unless (memq x '(0 24))
 		     (svg-text
 		      svg (format "%02d" x)
 		      :x (+ margin (* stride x))
-		      :y (+ wtop wheight -20)
+		      :y (+ wtop wheight -10)
 		      :font-size 20
 		      :text-anchor "middle"
 		      :font-weight "normal"
@@ -911,7 +904,7 @@
 			  (expand-file-name "~/src/smalldisplay.el/clouds1.png")
 			  "image/png" nil
 			  :x (+ margin (* stride x))
-			  :y (+ wtop (* cloud 2))
+			  :y (- (+ wtop wheight) 250 (* cloud 2))
 			  :width (format "%dpx" (* cloud 2.6)))))))
 	  (when nil
 	    (svg-embed svg (expand-file-name "~/src/smalldisplay.el/pattern1.png")
