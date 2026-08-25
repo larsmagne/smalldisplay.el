@@ -865,10 +865,13 @@
 	(let ((wheight 470)
 	      (wtop 430)
 	      (weather (smalldisplay-weather-data (format-time-string "%F"))))
-	  (svg-embed svg (expand-file-name "~/src/smalldisplay.el/pattern1.png")
+	  (svg-rectangle svg margin 260
+			 (- width (* margin 2)) 145
+			 :fill "black")
+	  (svg-embed svg (expand-file-name "~/src/smalldisplay.el/pattern3.png")
 		     "image/png" nil
 		     :x margin
-		     :y 220
+		     :y 250
 		     :width (- width (* margin 2)))
 	  (svg-embed svg (expand-file-name "~/src/smalldisplay.el/frame1.jpg")
 		     "image/jpeg" nil
@@ -881,7 +884,7 @@
 			 :stroke-width "2px"
 			 :stroke-color "black"
 			 :fill "#9ba87b")
-	  (cl-loop for x from 0 upto 24
+	  (cl-loop for x from 0 upto 24 by 3
 		   with stride = (/ (- width (* margin 2)) 24.0)
 		   do
 		   (unless (memq x '(0 24))
