@@ -825,7 +825,7 @@
 		  :text-anchor "middle"
 		  :font-weight "normal"
 		  :fill "black"
-		  :font-family "Coconino County"))
+		  :font-family "Coconino County Smooth"))
 	;; Temperature summary.
 	(svg-rectangle svg 950 margin
 		       200 200
@@ -850,7 +850,7 @@
 	   :text-anchor "middle"
 	   :font-weight "normal"
 	   :fill "black"
-	   :font-family "Coconino County")
+	   :font-family "Coconino County Smooth")
 	  (svg-text
 	   svg (format "%dmm" (plist-get summary :rain))
 	   :x (- width margin (/ 200 2))
@@ -859,14 +859,20 @@
 	   :text-anchor "middle"
 	   :font-weight "normal"
 	   :fill "black"
-	   :font-family "Coconino County"))
+	   :font-family "Coconino County Smooth"))
 
 	;; Weather.
-	(let ((wheight 500)
-	      (wtop 410)
+	(let ((wheight 475)
+	      (wtop 427)
 	      (weather (smalldisplay-weather-data (format-time-string "%F"))))
-	  (svg-rectangle svg margin wtop
-			 (- width (* margin 2)) wheight
+	  (svg-embed svg (expand-file-name "~/src/smalldisplay.el/frame1.jpg")
+		     "image/jpeg" nil
+		     :x margin
+		     :y 210
+		     :width (- width (* margin 2) -4))
+	  (svg-rectangle svg
+			 (+ margin 10) wtop
+			 (- width (* margin 2) 20) wheight
 			 :stroke-width "2px"
 			 :stroke-color "black"
 			 :fill "#9ba87b")
@@ -877,18 +883,19 @@
 			     (+ margin (* stride x))
 			     (+ wtop wheight)
 			     (+ margin (* stride x))
-			     (+ wtop wheight 10)
+			     (+ wtop wheight -10)
 			     :stroke-width 1
 			     :stroke-color "black")
-		   (svg-text
-		    svg (format "%02d" x)
-		    :x (+ margin (* stride x))
-		    :y (+ wtop wheight 30)
-		    :font-size 20
-		    :text-anchor "middle"
-		    :font-weight "normal"
-		    :fill "black"
-		    :font-family "Coconino County")
+		   (unless (memq x '(0 24))
+		     (svg-text
+		      svg (format "%02d" x)
+		      :x (+ margin (* stride x))
+		      :y (+ wtop wheight -20)
+		      :font-size 20
+		      :text-anchor "middle"
+		      :font-weight "normal"
+		      :fill "black"
+		      :font-family "Coconino County"))
 		   (when-let ((elem (smalldisplay-weather-hour weather x)))
 		     (let ((cloud (string-to-number
 				   (dom-attr (dom-by-tag elem 'cloudiness)
@@ -900,7 +907,13 @@
 			  "image/png" nil
 			  :x (+ margin (* stride x))
 			  :y (+ wtop (* cloud 2))
-			  :width (format "%dpx" (* cloud 2.6))))))))
+			  :width (format "%dpx" (* cloud 2.6)))))))
+	  (when nil
+	    (svg-embed svg (expand-file-name "~/src/smalldisplay.el/pattern1.png")
+		       "image/png" nil
+		       :x margin
+		       :y (+ wtop wheight)
+		       :width (- width (* margin 2)))))
 	)
     (with-current-buffer (get-buffer-create "*calstation*")
       (erase-buffer)
