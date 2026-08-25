@@ -862,8 +862,8 @@
 	   :font-family "Coconino County Smooth"))
 
 	;; Weather.
-	(let ((wheight 475)
-	      (wtop 427)
+	(let ((wheight 470)
+	      (wtop 430)
 	      (weather (smalldisplay-weather-data (format-time-string "%F"))))
 	  (svg-embed svg (expand-file-name "~/src/smalldisplay.el/pattern1.png")
 		     "image/png" nil
@@ -876,8 +876,8 @@
 		     :y 210
 		     :width (- width (* margin 2) -4))
 	  (svg-rectangle svg
-			 (+ margin 10) wtop
-			 (- width (* margin 2) 20) wheight
+			 (+ margin 15) wtop
+			 (- width (* margin 2) 30) wheight
 			 :stroke-width "2px"
 			 :stroke-color "black"
 			 :fill "#9ba87b")
