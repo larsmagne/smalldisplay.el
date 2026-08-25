@@ -729,7 +729,7 @@
 				(+ 1 ctop (* (/ day 7) hstride))
 				(- wstride 2)
 				(- hstride 2)
-				:fill-color "#cfebf7"))
+				:fill-color "#b7c07a"))
 	       (when (and (= (decoded-time-month time)
 			     (decoded-time-month (decode-time now)))
 			  (= (decoded-time-day time)
@@ -779,10 +779,9 @@
 				     t "\\.png\\'"))
 		   "image/png"
 		   nil
-		   :width 1100
-		   :height 200
+		   :width (- width (* margin 2) -5)
 		   ;; Show the center part of the image.
-		   :x 50
+		   :x (- margin 2)
 		   :y 1410)
 
 	;; Heading.
@@ -883,7 +882,7 @@
 			 (- width (* margin 2) 30) wheight
 			 :stroke-width "2px"
 			 :stroke-color "black"
-			 :fill "#9ba87b")
+			 :fill "#cfebf7")
 	  (cl-loop for x from 0 upto 24 by 3
 		   with stride = (/ (- width (* margin 2)) 24.0)
 		   do
