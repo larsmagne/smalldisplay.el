@@ -690,33 +690,47 @@
 	 (margin 50)
 	 (svg (svg-create width height)))
     (svg-rectangle svg 0 0 width height
-		   :fill "#103010")
+		   :fill "white")
     ;; Find the start date.  We want a Monday two weeks before the
     ;; current month.
     (let* ((now (time-convert (current-time) 'integer))
 	   (time (decode-time now))
-	   (ctop 1000)
+	   (ctop 900)
 	   (hstride 60)
-	   (wstride 100))
+	   (wstride (/ (- width (* margin 2)) 7)))
+      (svg-rectangle svg margin ctop (- width (* margin 2)) (* hstride 9)
+		   :fill "#ffff87")
       (setf (decoded-time-day time) 1)
       (setq time (decoded-time-add time (make-decoded-time :day -7)))
       (cl-loop while (> (decoded-time-weekday (decode-time (encode-time time)))
 			1)
 	       do (setq time (decoded-time-add
 			      time (make-decoded-time :day -1))))
-      (cl-loop for week from 0 upto 8
+      (cl-loop for week from 0 upto 9
 	       do
 	       (svg-line svg margin (+ ctop (* week hstride))
 			 (+ margin (* wstride 7)) (+ ctop (* week hstride))
 			 :stroke-width 2
-			 :stroke-color "white"))
+			 :stroke-color "black"))
       (cl-loop for day from 0 upto 7
 	       do
 	       (svg-line svg
 			 (+ margin (* day wstride)) ctop
-			 (+ margin (* day wstride)) (+ ctop (* 8 hstride))
+			 (+ margin (* day wstride)) (+ ctop (* 9 hstride))
 			 :stroke-width 2
-			 :stroke-color "white"))
+			 :stroke-color "black"))
+      (cl-loop for day from 0 upto 6
+	       do
+	       (svg-text svg (elt '("lundi" "mardi" "mercredi" "jeudi"
+				    "vendredi" "samedi" "dimanche")
+				  day)
+			 :x (+ margin (/ wstride 2) (* day wstride))
+			 :y (+ ctop 40)
+			 :font-size 25
+			 :text-anchor "middle"
+			 :font-weight "normal"
+			 :fill "black"
+			 :font-family "Harriman"))
       (cl-loop for day from 0 upto (1- (* 7 8))
 	       do
 	       (when (and (= (decoded-time-month time)
@@ -725,13 +739,13 @@
 			     (decoded-time-day (decode-time  now))))
 		 (svg-rectangle svg
 				(+ 1 margin (* (mod day 7) wstride))
-				(+ 1 ctop (* (/ day 7) hstride))
+				(+ 1 (+ ctop hstride) (* (/ day 7) hstride))
 				(- wstride 2)
 				(- hstride 2)
-				:fill-color "red"))
+				:fill-color "#d36863"))
 	       (svg-text svg (format "%d" (decoded-time-day time))
 			 :x (+ margin (- wstride 8) (* (mod day 7) wstride))
-			 :y (+ 30 ctop (* (/ day 7) hstride))
+			 :y (+ 30 (+ ctop hstride) (* (/ day 7) hstride))
 			 :font-size 25
 			 :text-anchor "end"
 			 :font-weight (if (member (mod day 7) '(5 6))
@@ -739,11 +753,23 @@
 					"normal")
 			 :fill (if (= (decoded-time-month time)
 				      (decoded-time-month (decode-time now)))
-				   "white"
+				   "black"
 				 "grey")
-			 :font-family "futura")
+			 :font-family "Harriman")
 	       (setq time (decoded-time-add time (make-decoded-time :day 1))))
-      )
+
+	(svg-embed svg
+		   (seq-random-elt
+		    (directory-files "~/src/smalldisplay.el/krazy/strips/"
+				     t "\\.png\\'"))
+		   "image/png"
+		   nil
+		   :width 1100
+		   :height 200
+		   ;; Show the center part of the image.
+		   :x 50
+		   :y 1410)
+	)
     (with-current-buffer (get-buffer-create "*calstation*")
       (erase-buffer)
       (insert-image (svg-image svg :max-width 1100))
