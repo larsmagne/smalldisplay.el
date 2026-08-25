@@ -821,7 +821,7 @@
 			    (decoded-time-year dnow)))
 		  :x (/ hwidth 2)
 		  :y (+ wstart 80)
-		  :font-size 60
+		  :font-size 50
 		  :text-anchor "middle"
 		  :font-weight "normal"
 		  :fill "black"
@@ -863,7 +863,8 @@
 
 	;; Weather.
 	(let ((wheight 500)
-	      (wtop 410))
+	      (wtop 410)
+	      (weather (smalldisplay-weather-data (format-time-string "%F"))))
 	  (svg-rectangle svg margin wtop
 			 (- width (* margin 2)) wheight
 			 :stroke-width "2px"
@@ -879,7 +880,6 @@
 			     (+ wtop wheight 10)
 			     :stroke-width 1
 			     :stroke-color "black")
-		   (when (< x 25)
 		   (svg-text
 		    svg (format "%02d" x)
 		    :x (+ margin (* stride x))
@@ -888,7 +888,19 @@
 		    :text-anchor "middle"
 		    :font-weight "normal"
 		    :fill "black"
-		    :font-family "Coconino County"))))
+		    :font-family "Coconino County")
+		   (when-let ((elem (smalldisplay-weather-hour weather x)))
+		     (let ((cloud (string-to-number
+				   (dom-attr (dom-by-tag elem 'cloudiness)
+					     'percent))))
+		       (when (> cloud 0)
+			 (svg-embed
+			  svg
+			  (expand-file-name "~/src/smalldisplay.el/clouds1.png")
+			  "image/png" nil
+			  :x (+ margin (* stride x))
+			  :y (+ wtop (* cloud 2))
+			  :width (format "%dpx" (* cloud 2.6))))))))
 	)
     (with-current-buffer (get-buffer-create "*calstation*")
       (erase-buffer)
@@ -896,6 +908,15 @@
       (insert "\n\n")
       (when-let ((window (get-buffer-window nil t)))
 	(set-window-point window (point-max))))))
+
+(defun smalldisplay-weather-hour (weather hour)
+  (cl-loop for elem in weather
+	   when (and
+		 (dom-by-tag elem 'cloudiness)
+		 (equal
+		  (format "%sT%02d:" (format-time-string "%F") hour)
+		  (substring (dom-attr elem 'from) 0 14)))
+	   return elem))
 
 (defun smalldisplay-calendar-entries (time)
   (cl-loop for event in (nth 3 (car smalldisplay-calendar-entries))
