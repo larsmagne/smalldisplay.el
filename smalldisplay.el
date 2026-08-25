@@ -865,6 +865,11 @@
 	(let ((wheight 475)
 	      (wtop 427)
 	      (weather (smalldisplay-weather-data (format-time-string "%F"))))
+	  (svg-embed svg (expand-file-name "~/src/smalldisplay.el/pattern1.png")
+		     "image/png" nil
+		     :x margin
+		     :y 220
+		     :width (- width (* margin 2)))
 	  (svg-embed svg (expand-file-name "~/src/smalldisplay.el/frame1.jpg")
 		     "image/jpeg" nil
 		     :x margin
