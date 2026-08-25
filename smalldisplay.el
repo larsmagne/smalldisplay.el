@@ -729,9 +729,9 @@
 				(- hstride 2)
 				:fill-color "#cfebf7"))
 	       (when (and (= (decoded-time-month time)
-			     (decoded-time-month (decode-time  now)))
+			     (decoded-time-month (decode-time now)))
 			  (= (decoded-time-day time)
-			     (decoded-time-day (decode-time  now))))
+			     (decoded-time-day (decode-time now))))
 		 (svg-rectangle svg
 				(+ 1 margin (* (mod day 7) wstride))
 				(+ 1 ctop (* (/ day 7) hstride))
@@ -743,16 +743,32 @@
 			 :y (+ 30 ctop (* (/ day 7) hstride))
 			 :font-size 25
 			 :text-anchor "end"
-			 :font-weight (if (member (mod day 7) '(5 6))
-					  ;; The bold on Harriman
-					  ;; is just too ugly.
-					  "normal"
-					"normal")
+			 :font-weight "normal"
 			 :fill (if (= (decoded-time-month time)
 				      (decoded-time-month (decode-time now)))
 				   "black"
 				 "grey")
 			 :font-family "Harriman")
+	       (cl-loop for event in (smalldisplay-calendar-entries time)
+			for i from 0
+			for text =
+			(string-limit
+			 (string-trim
+			  (or (nth 2 (assq 'SUMMARY event)) "*"))
+			 20)
+			do
+			(svg-text
+			 svg text
+			 :x (+ margin 10 (* (mod day 7) wstride))
+			 :y (+ 20 ctop (* (/ day 7) hstride) (* i 15))
+			 :font-size 15
+			 :text-anchor "start"
+			 :font-weight "normal"
+			 :fill (if (= (decoded-time-month time)
+				      (decoded-time-month (decode-time now)))
+				   "black"
+				 "grey")
+			 :font-family "Harriman"))
 	       (setq time (decoded-time-add time (make-decoded-time :day 1))))
 
 	(svg-embed svg
@@ -774,17 +790,27 @@
       (when-let ((window (get-buffer-window nil t)))
 	(set-window-point window (point-max))))))
 
+(defun smalldisplay-calendar-entries (time)
+  (cl-loop for event in (nth 3 (car smalldisplay-calendar-entries))
+	   for start = (iso8601-parse (caddr (assq 'DTSTART (nth 2 event))))
+	   when (and (= (decoded-time-year time) (decoded-time-year start))
+		     (= (decoded-time-month time) (decoded-time-month start))
+		     (= (decoded-time-day time) (decoded-time-day start)))
+	   collect (nth 2 event)))
 
 (defvar smalldisplay-calendar-url nil)
+(defvar smalldisplay-calendar-entries nil)
 
-(defun smalldislay-get-calendar (url)
-  (with-current-buffer (url-retrieve-synchronously url)
-    (goto-char (point-min))
-    (prog1
-	(when (search-forward "\n\n" nil t)
-	  (decode-coding-region (point) (point-max) 'utf-8)
-	  (icalendar--read-element nil nil))
-      (kill-buffer (current-buffer)))))
+(defun smalldislay-get-calendar ()
+  (setq
+   smalldisplay-calendar-entries
+   (with-current-buffer (url-retrieve-synchronously smalldisplay-calendar-url)
+     (goto-char (point-min))
+     (prog1
+	 (when (search-forward "\n\n" nil t)
+	   (decode-coding-region (point) (point-max) 'utf-8)
+	   (icalendar--read-element nil nil))
+       (kill-buffer (current-buffer))))))
 
 (provide 'smalldisplay)
 
