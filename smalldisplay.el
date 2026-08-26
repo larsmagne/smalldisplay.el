@@ -897,17 +897,33 @@
 		      :fill "black"
 		      :font-family "Coconino County"))
 		   (when-let ((elem (smalldisplay-weather-hour weather x)))
-		     (let ((cloud (string-to-number
-				   (dom-attr (dom-by-tag elem 'cloudiness)
-					     'percent))))
+		     (let* ((cloud (string-to-number
+				    (dom-attr (dom-by-tag elem 'cloudiness)
+					      'percent)))
+			    (ypos
+			     (- wtop
+				(*
+				 (smalldisplay-oslo-solar-elevation
+				  (format "%s %02d:30" (format-time-string "%F")
+					  (1+ x)))
+				 5)))
+			    (cwidth (* cloud 2.6)))
+		       (svg-embed
+			svg
+			(expand-file-name "~/src/smalldisplay.el/sun2.png")
+			"image/png" nil
+			:x (+ margin (* stride x) (/ (* stride 3) 2) -50)
+			:y ypos
+			:width 100)
 		       (when (> cloud 0)
 			 (svg-embed
 			  svg
 			  (expand-file-name "~/src/smalldisplay.el/clouds1.png")
 			  "image/png" nil
-			  :x (+ margin (* stride x))
-			  :y (- (+ wtop wheight) 250 (* cloud 2))
-			  :width (format "%dpx" (* cloud 2.6)))))))
+			  :x (+ margin (* stride x) (/ (* stride 3) 2)
+				(- (/ cwidth 2)))
+			  :y (+ ypos 260)
+			  :width cwidth)))))
 	  (when nil
 	    (svg-embed svg (expand-file-name "~/src/smalldisplay.el/pattern1.png")
 		       "image/png" nil
@@ -987,6 +1003,53 @@
 	   finally (return (list :max-temp max-temp
 				 :min-temp min-temp
 				 :rain rain-total))))
+
+(defun smalldisplay-elevation (lat lon &optional time)
+  "Return the sun's elevation in degrees at LAT/LON at TIME.
+LAT and LON are in degrees, LON positive east.  TIME is an Emacs
+time value (defaults to now).  Negative results mean the sun is
+below the horizon.  Atmospheric refraction is not included."
+  (let* ((time (or time (current-time)))
+         (deg (/ float-pi 180.0))
+         (dt (decode-time time t))      ; decode in UTC
+         (doy (string-to-number (format-time-string "%j" time t)))
+         (hour (+ (decoded-time-hour dt)
+                  (/ (decoded-time-minute dt) 60.0)
+                  (/ (decoded-time-second dt) 3600.0)))
+         ;; Fractional year, in radians.
+         (gamma (* (/ (* 2 float-pi) 365.0)
+                   (+ (1- doy) (/ (- hour 12) 24.0))))
+         ;; Equation of time, in minutes.
+         (eqtime (* 229.18
+                    (+ 0.000075
+                       (*  0.001868 (cos gamma))
+                       (* -0.032077 (sin gamma))
+                       (* -0.014615 (cos (* 2 gamma)))
+                       (* -0.040849 (sin (* 2 gamma))))))
+         ;; Solar declination, in radians.
+         (decl (+ 0.006918
+                  (* -0.399912 (cos gamma))
+                  (*  0.070257 (sin gamma))
+                  (* -0.006758 (cos (* 2 gamma)))
+                  (*  0.000907 (sin (* 2 gamma)))
+                  (* -0.002697 (cos (* 3 gamma)))
+                  (*  0.001480 (sin (* 3 gamma)))))
+         ;; True solar time in minutes (hour is UTC, so no tz term).
+         (tst (+ (* hour 60.0) eqtime (* 4.0 lon)))
+         ;; Hour angle, in radians.
+         (ha (* deg (- (/ tst 4.0) 180.0)))
+         (lat-r (* deg lat))
+         (sin-h (+ (* (sin lat-r) (sin decl))
+                   (* (cos lat-r) (cos decl) (cos ha)))))
+    (/ (asin sin-h) deg)))
+
+(defun smalldisplay-oslo-solar-elevation (&optional time-string)
+  (let* ((time (if (or (null time-string)
+                       (string-empty-p time-string))
+                   (current-time)
+                 (date-to-time time-string)))
+         (h (smalldisplay-elevation 59.91 10.75 time)))
+    h))
 
 (provide 'smalldisplay)
 
