@@ -886,7 +886,7 @@
 	  (svg-rectangle svg
 			 (+ margin 15 1)  (+ wtop 280)
 			 (- width (* margin 2) 30 2) (- wheight 280)
-			 :fill "black")
+			 :fill "#1a0107")
 	  (cl-loop for x from 0 upto 24 by 3
 		   with stride = (/ (- width (* margin 2)) 24.0)
 		   do
@@ -911,7 +911,7 @@
 			    (sunmoon (if (< elevation 0)
 					 "~/src/smalldisplay.el/moon3.png"
 				       "~/src/smalldisplay.el/sun2.png"))
-			    (ypos (- wtop (* elevation 5) 230))
+			    (ypos (- wtop (* elevation 5) -40))
 			    (cwidth (* cloud 2.6))
 			    (isize (smalldisplay-image-size sunmoon)))
 		       (svg-embed
@@ -922,10 +922,8 @@
 			      (if (< elevation 0)
 				  -25
 				-50))
-			:y (+ ypos
-			      (if (< elevation 0)
-				  400
-				200))
+			:y (+ ypos 200)
+			:preserveAspectRatio "xMinYMin meet"
 			:width (if (< elevation 0)
 				   50
 				 100))
@@ -936,7 +934,7 @@
 			  "image/png" nil
 			  :x (+ margin (* stride x) (/ (* stride 3) 2)
 				(- (/ cwidth 2)))
-			  :y (+ ypos 460)
+			  :y (+ ypos 180)
 			  :width cwidth)))))
 	  (when nil
 	    (svg-embed svg (expand-file-name "~/src/smalldisplay.el/pattern1.png")
