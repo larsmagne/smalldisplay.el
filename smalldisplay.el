@@ -883,6 +883,10 @@
 			 :stroke-width "2px"
 			 :stroke-color "black"
 			 :fill "#cfebf7")
+	  (svg-rectangle svg
+			 (+ margin 15 1)  (+ wtop 280)
+			 (- width (* margin 2) 30 2) (- wheight 280)
+			 :fill "black")
 	  (cl-loop for x from 0 upto 24 by 3
 		   with stride = (/ (- width (* margin 2)) 24.0)
 		   do
@@ -894,27 +898,37 @@
 		      :font-size 20
 		      :text-anchor "middle"
 		      :font-weight "normal"
-		      :fill "black"
+		      :fill "white"
 		      :font-family "Coconino County"))
 		   (when-let ((elem (smalldisplay-weather-hour weather x)))
 		     (let* ((cloud (string-to-number
 				    (dom-attr (dom-by-tag elem 'cloudiness)
 					      'percent)))
-			    (ypos
-			     (- wtop
-				(*
-				 (smalldisplay-oslo-solar-elevation
-				  (format "%s %02d:30" (format-time-string "%F")
-					  (1+ x)))
-				 5)))
-			    (cwidth (* cloud 2.6)))
+			    (elevation 
+			     (smalldisplay-oslo-solar-elevation
+			      (format "%s %02d:30" (format-time-string "%F")
+				      (1+ x))))
+			    (sunmoon (if (< elevation 0)
+					 "~/src/smalldisplay.el/moon3.png"
+				       "~/src/smalldisplay.el/sun2.png"))
+			    (ypos (- wtop (* elevation 5) 230))
+			    (cwidth (* cloud 2.6))
+			    (isize (smalldisplay-image-size sunmoon)))
 		       (svg-embed
 			svg
-			(expand-file-name "~/src/smalldisplay.el/sun2.png")
+			(expand-file-name sunmoon)
 			"image/png" nil
-			:x (+ margin (* stride x) (/ (* stride 3) 2) -50)
-			:y ypos
-			:width 100)
+			:x (+ margin (* stride x) (/ (* stride 3) 2)
+			      (if (< elevation 0)
+				  -25
+				-50))
+			:y (+ ypos
+			      (if (< elevation 0)
+				  400
+				200))
+			:width (if (< elevation 0)
+				   50
+				 100))
 		       (when (> cloud 0)
 			 (svg-embed
 			  svg
@@ -922,7 +936,7 @@
 			  "image/png" nil
 			  :x (+ margin (* stride x) (/ (* stride 3) 2)
 				(- (/ cwidth 2)))
-			  :y (+ ypos 260)
+			  :y (+ ypos 460)
 			  :width cwidth)))))
 	  (when nil
 	    (svg-embed svg (expand-file-name "~/src/smalldisplay.el/pattern1.png")
