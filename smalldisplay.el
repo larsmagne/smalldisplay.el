@@ -856,9 +856,9 @@
 				 "vendredi" "samedi" "dimanche")
 			       (1- (decoded-time-weekday dnow)))
 			  (decoded-time-day dnow)
-			  (elt '("" "janvier" "fevrier" "mars" "avril" "mai"
-				 "june" "juillet" "ôut" "september" "octobre"
-				 "novembre" "decembre")
+			  (elt '("" "janvier" "février" "mars" "avril" "mai"
+				 "juin" "juillet" "août" "septembre" "octobre"
+				 "novembre" "décembre")
 			       (decoded-time-month dnow))
 			  (decoded-time-year dnow)))
 		:x (/ hwidth 2)
