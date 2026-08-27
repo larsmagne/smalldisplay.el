@@ -712,8 +712,8 @@
     ;; current month.
     (let* ((now (time-convert (current-time) 'integer))
 	   (time (decode-time now))
-	   (ctop (+ 960 margin))
-	   (hstride 63)
+	   (ctop (+ 950 margin))
+	   (hstride 64)
 	   (wstride (/ (- width (* margin 2)) 7)))
       (svg-rectangle svg margin ctop (- width (* margin 2)) (* hstride 8)
 		     :fill "#ffff87")
@@ -805,7 +805,7 @@
 		 :width (- width (* margin 2) -5)
 		 :preserveAspectRatio "xMinYMin meet"
 		 :x (- margin 2)
-		 :y (+ ctop (* hstride 8) 8))
+		 :y (+ ctop (* hstride 8) 6))
 
       ;; Heading.
       (cl-loop with wstart = margin
@@ -886,7 +886,7 @@
 
       ;; Weather.
       (let ((wheight 503)
-	    (wtop (+ 390 margin))
+	    (wtop (+ 386 margin))
 	    (weather (smalldisplay-weather-data (smalldisplay-date))))
 	(svg-rectangle svg margin 210
 		       (- width (* margin 2)) 145
@@ -901,7 +901,7 @@
 	(svg-embed svg (expand-file-name "~/src/smalldisplay.el/frame1.jpg")
 		   "image/jpeg" nil
 		   :x margin
-		   :y (+ 365 margin)
+		   :y (+ 360 margin)
 		   :preserveAspectRatio "xMinYMin meet"
 		   :width (- width (* margin 2)))
 	(svg-rectangle svg
@@ -909,11 +909,11 @@
 		       (- width (* margin 2) 30) wheight
 		       :stroke-width "2px"
 		       :stroke-color "black"
-		       :fill "#afcbf7")
+		       :fill "#7888c8")
 	(when t
 	  (svg-rectangle svg
-			 (+ margin 15 1)  (+ wtop 280)
-			 (- width (* margin 2) 30 2) (- wheight 280)
+			 (+ margin 15 1)  (+ wtop 330)
+			 (- width (* margin 2) 30 2) (- wheight 330)
 			 :fill "#1a0107"))
 	(let ((rain (smalldisplay-weather-rain weather)))
 	  (svg-smooth-line
@@ -928,7 +928,7 @@
 				      (- wheight (* (/ pval 24.0) wheight))))))
 	   :stroke-width 7
 	   :fill "none"
-	   :stroke "#cd6683"))
+	   :stroke "white"))
 	;; Sunmoon clouds.
 	(cl-loop for x from 0 upto 24 by 3
 		 with stride = (/ (- width (* margin 2)) 24.0)
@@ -955,7 +955,7 @@
 			  (sunmoon (if (< elevation 0)
 				       "~/src/smalldisplay.el/moon5.png"
 				     "~/src/smalldisplay.el/sun2.png"))
-			  (ypos (- wtop (* elevation 5) -40))
+			  (ypos (- wtop (* elevation 6) -90))
 			  (cwidth (* cloud 2.6)))
 		     (svg-embed
 		      svg
@@ -981,7 +981,17 @@
 			:x (+ margin (* stride x) (/ (* stride 3) 2)
 			      (- (/ cwidth 2)))
 			:y (+ ypos 180)
-			:width cwidth)))))
+			:width cwidth))
+		     (when (> cloud 80)
+		       (svg-embed
+			svg
+			(expand-file-name "~/src/smalldisplay.el/lightning2.png")
+			"image/png" nil
+			:preserveAspectRatio "xMinYMin meet"
+			:x (+ margin (* stride x) (/ (* stride 3) 2)
+			      -25)
+			:y (+ ypos 260)
+			:width 50)))))
 	(when nil
 	  (svg-embed svg (expand-file-name "~/src/smalldisplay.el/pattern1.png")
 		     "image/png" nil
