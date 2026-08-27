@@ -701,7 +701,7 @@
 	   (hstride 61)
 	   (wstride (/ (- width (* margin 2)) 7)))
       (svg-rectangle svg margin ctop (- width (* margin 2)) (* hstride 8)
-		   :fill "#ffff87")
+		     :fill "#ffff87")
       (setf (decoded-time-day time) 1)
       (setq time (decoded-time-add time (make-decoded-time :day -7)))
       (cl-loop while (> (decoded-time-weekday (decode-time (encode-time time)))
@@ -772,197 +772,205 @@
 				 "grey")
 			 :font-family "Coconino County"))
 	       (setq time (decoded-time-add time (make-decoded-time :day 1))))
+      (svg-embed svg
+		 (expand-file-name "~/src/smalldisplay.el/circle1.png")
+		 "image/png"
+		 nil
+		 :width wstride
+		 :height (- hstride 1)
+		 :preserveAspectRatio "none meet"
+		 :x (+ margin (* 6 wstride))
+		 :y (+ ctop (* hstride 7) 0.5))      
+      (svg-embed svg
+		 (seq-random-elt
+		  (directory-files "~/src/smalldisplay.el/krazy/strips/"
+				   t "\\.png\\'"))
+		 "image/png"
+		 nil
+		 :width (- width (* margin 2) -5)
+		 :preserveAspectRatio "xMinYMin meet"
+		 :x (- margin 2)
+		 :y (+ ctop (* hstride 8) 8))
 
-	(svg-embed svg
-		   (seq-random-elt
-		    (directory-files "~/src/smalldisplay.el/krazy/strips/"
-				     t "\\.png\\'"))
-		   "image/png"
-		   nil
-		   :width (- width (* margin 2) -5)
-		   :preserveAspectRatio "xMinYMin meet"
-		   :x (- margin 2)
-		   :y (+ ctop (* hstride 8) 8))
+      ;; Heading.
+      (cl-loop with wstart = margin
+	       with hstart = 200
+	       with hwidth = (- width 210)
+	       for (size color) in '((15 "black")
+				     (20 "#ffff87")
+				     (2 "black")
+				     (2 "white")
+				     (2 "black"))
+	       do
+	       (svg-rectangle svg wstart wstart
+			      (- hwidth (* wstart 2))
+			      hstart
+			      :fill color)
+	       (cl-incf wstart size)
+	       (cl-decf hstart (* size 2))
+	       finally
+	       (svg-rectangle svg wstart wstart
+			      (- hwidth (* wstart 2))
+			      hstart
+			      :fill "#d36863")
+	       (svg-text
+		svg
+		(let ((dnow (decode-time now)))
+		  (format "%s %d %s %d"
+			  (elt '("lundi" "mardi" "mercredi" "jeudi"
+				 "vendredi" "samedi" "dimanche")
+			       (1- (decoded-time-weekday dnow)))
+			  (decoded-time-day dnow)
+			  (elt '("" "janvier" "fevrier" "mars" "avril" "mai"
+				 "june" "juillet" "ôut" "september" "octobre"
+				 "novembre" "decembre")
+			       (decoded-time-month dnow))
+			  (decoded-time-year dnow)))
+		:x (/ hwidth 2)
+		:y (+ wstart 80)
+		:font-size 50
+		:text-anchor "middle"
+		:font-weight "normal"
+		:fill "black"
+		:font-family "Coconino County Smooth"))
+      ;; Temperature summary.
+      (svg-rectangle svg 950 margin
+		     200 200
+		     :fill "black")
+      (svg-rectangle svg 952 (+ margin 2)
+		     196 196
+		     :fill "#ffff87")
+      (let ((summary (smalldisplay-weather-summary
+		      (smalldisplay-weather-data (smalldisplay-date)))))
+	(svg-embed svg (expand-file-name "~/src/smalldisplay.el/roundthing1.png")
+		   "image/png" nil
+		   :x (- width margin 170)
+		   :y 110
+		   :height "75px")
+	(svg-text
+	 svg (format "%d°-%d°"
+		     (plist-get summary :min-temp)
+		     (plist-get summary :max-temp))
+	 :x (- width margin (/ 200 2))
+	 :y (+ margin 50)
+	 :font-size 40
+	 :text-anchor "middle"
+	 :font-weight "normal"
+	 :fill "black"
+	 :font-family "Coconino County Smooth")
+	(svg-text
+	 svg (format "%dmm" (plist-get summary :rain))
+	 :x (- width margin (/ 200 2))
+	 :y (+ margin 180)
+	 :font-size 40
+	 :text-anchor "middle"
+	 :font-weight "normal"
+	 :fill "black"
+	 :font-family "Coconino County Smooth"))
 
-	;; Heading.
-	(cl-loop with wstart = margin
-		 with hstart = 200
-		 with hwidth = (- width 210)
-		 for (size color) in '((15 "black")
-				       (20 "#ffff87")
-				       (2 "black")
-				       (2 "white")
-				       (2 "black"))
-		 do
-		 (svg-rectangle svg wstart wstart
-				(- hwidth (* wstart 2))
-				hstart
-				:fill color)
-		 (cl-incf wstart size)
-		 (cl-decf hstart (* size 2))
-		 finally
-		 (svg-rectangle svg wstart wstart
-				(- hwidth (* wstart 2))
-				hstart
-				:fill "#d36863")
-		 (svg-text
-		  svg
-		  (let ((dnow (decode-time now)))
-		    (format "%s %d %s %d"
-			    (elt '("lundi" "mardi" "mercredi" "jeudi"
-				   "vendredi" "samedi" "dimanche")
-				 (1- (decoded-time-weekday dnow)))
-			    (decoded-time-day dnow)
-			    (elt '("" "janvier" "fevrier" "mars" "avril" "mai"
-				   "june" "juillet" "ôut" "september" "octobre"
-				   "novembre" "decembre")
-				 (decoded-time-month dnow))
-			    (decoded-time-year dnow)))
-		  :x (/ hwidth 2)
-		  :y (+ wstart 80)
-		  :font-size 50
-		  :text-anchor "middle"
-		  :font-weight "normal"
-		  :fill "black"
-		  :font-family "Coconino County Smooth"))
-	;; Temperature summary.
-	(svg-rectangle svg 950 margin
-		       200 200
+      ;; Weather.
+      (let ((wheight 470)
+	    (wtop 430)
+	    (weather (smalldisplay-weather-data (smalldisplay-date))))
+	(svg-rectangle svg margin 260
+		       (- width (* margin 2)) 145
 		       :fill "black")
-	(svg-rectangle svg 952 (+ margin 2)
-		       196 196
-		       :fill "#ffff87")
-	(let ((summary (smalldisplay-weather-summary
-			(smalldisplay-weather-data (smalldisplay-date)))))
-	  (svg-embed svg (expand-file-name "~/src/smalldisplay.el/roundthing1.png")
-		     "image/png" nil
-		     :x (- width margin 170)
-		     :y 110
-		     :height "75px")
-	  (svg-text
-	   svg (format "%d°-%d°"
-		       (plist-get summary :min-temp)
-		       (plist-get summary :max-temp))
-	   :x (- width margin (/ 200 2))
-	   :y (+ margin 50)
-	   :font-size 40
-	   :text-anchor "middle"
-	   :font-weight "normal"
-	   :fill "black"
-	   :font-family "Coconino County Smooth")
-	  (svg-text
-	   svg (format "%dmm" (plist-get summary :rain))
-	   :x (- width margin (/ 200 2))
-	   :y (+ margin 180)
-	   :font-size 40
-	   :text-anchor "middle"
-	   :font-weight "normal"
-	   :fill "black"
-	   :font-family "Coconino County Smooth"))
-
-	;; Weather.
-	(let ((wheight 470)
-	      (wtop 430)
-	      (weather (smalldisplay-weather-data (smalldisplay-date))))
-	  (svg-rectangle svg margin 260
-			 (- width (* margin 2)) 145
-			 :fill "black")
-	  (svg-embed svg (expand-file-name "~/src/smalldisplay.el/pattern3.png")
-		     "image/png" nil
-		     :x margin
-		     :y 250
-		     :width (- width (* margin 2)))
-	  (svg-embed svg (expand-file-name "~/src/smalldisplay.el/frame1.jpg")
-		     "image/jpeg" nil
-		     :x margin
-		     :y 210
-		     :width (- width (* margin 2) -4))
+	(svg-embed svg (expand-file-name "~/src/smalldisplay.el/pattern3.png")
+		   "image/png" nil
+		   :x margin
+		   :y 250
+		   :width (- width (* margin 2)))
+	(svg-embed svg (expand-file-name "~/src/smalldisplay.el/frame1.jpg")
+		   "image/jpeg" nil
+		   :x margin
+		   :y 210
+		   :width (- width (* margin 2) -4))
+	(svg-rectangle svg
+		       (+ margin 15) wtop
+		       (- width (* margin 2) 30) wheight
+		       :stroke-width "2px"
+		       :stroke-color "black"
+		       :fill "#cfebf7")
+	(when t
 	  (svg-rectangle svg
-			 (+ margin 15) wtop
-			 (- width (* margin 2) 30) wheight
-			 :stroke-width "2px"
-			 :stroke-color "black"
-			 :fill "#cfebf7")
-	  (when t
-	    (svg-rectangle svg
-			   (+ margin 15 1)  (+ wtop 280)
-			   (- width (* margin 2) 30 2) (- wheight 280)
-			   :fill "#1a0107"))
-	  (let ((rain (smalldisplay-weather-rain weather)))
-	    (message "%s" rain)
-	    (svg-smooth-line
-	     svg
-	     (smalldisplay-smooth
-	      (cl-loop for pval in rain
-		       for i from 0
-		       collect (cons (+ (* i (/ (- width (* margin 2) -25)
-						(- (float (length rain)) 4)))
-					50)
-				     (+ wtop
-					(- wheight (* (/ pval 24.0) wheight))))))
-	     :stroke-width 7
-	     :fill "none"
-	     :stroke "#d36863"))
-	  ;; Sunmoon clouds.
-	  (cl-loop for x from 0 upto 24 by 3
-		   with stride = (/ (- width (* margin 2)) 24.0)
-		   do
-		   (unless (memq x '(0 24))
-		     (svg-text
-		      svg (format "%02d" x)
-		      :x (+ margin (* stride x))
-		      :y (+ wtop wheight -10)
-		      :font-size 20
-		      :text-anchor "middle"
-		      :font-weight "normal"
-		      :fill "white"
-		      :font-family "Coconino County"))
-		   (when-let ((elem (smalldisplay-weather-hour weather
-							       (1+ x))))
-		     (let* ((cloud (string-to-number
-				    (dom-attr (dom-by-tag elem 'cloudiness)
-					      'percent)))
-			    (elevation 
-			     (smalldisplay-oslo-solar-elevation
-			      (format "%s %02d:30" (smalldisplay-date)
-				      (1+ x))))
-			    (sunmoon (if (< elevation 0)
-					 "~/src/smalldisplay.el/moon4.png"
-				       "~/src/smalldisplay.el/sun2.png"))
-			    (ypos (- wtop (* elevation 5) -40))
-			    (cwidth (* cloud 2.6)))
+			 (+ margin 15 1)  (+ wtop 280)
+			 (- width (* margin 2) 30 2) (- wheight 280)
+			 :fill "#1a0107"))
+	(let ((rain (smalldisplay-weather-rain weather)))
+	  (message "%s" rain)
+	  (svg-smooth-line
+	   svg
+	   (smalldisplay-smooth
+	    (cl-loop for pval in rain
+		     for i from 0
+		     collect (cons (+ (* i (/ (- width (* margin 2) -25)
+					      (- (float (length rain)) 4)))
+				      50)
+				   (+ wtop
+				      (- wheight (* (/ pval 24.0) wheight))))))
+	   :stroke-width 7
+	   :fill "none"
+	   :stroke "#d36863"))
+	;; Sunmoon clouds.
+	(cl-loop for x from 0 upto 24 by 3
+		 with stride = (/ (- width (* margin 2)) 24.0)
+		 do
+		 (unless (memq x '(0 24))
+		   (svg-text
+		    svg (format "%02d" x)
+		    :x (+ margin (* stride x))
+		    :y (+ wtop wheight -10)
+		    :font-size 20
+		    :text-anchor "middle"
+		    :font-weight "normal"
+		    :fill "white"
+		    :font-family "Coconino County"))
+		 (when-let ((elem (smalldisplay-weather-hour weather
+							     (1+ x))))
+		   (let* ((cloud (string-to-number
+				  (dom-attr (dom-by-tag elem 'cloudiness)
+					    'percent)))
+			  (elevation 
+			   (smalldisplay-oslo-solar-elevation
+			    (format "%s %02d:30" (smalldisplay-date)
+				    (1+ x))))
+			  (sunmoon (if (< elevation 0)
+				       "~/src/smalldisplay.el/moon4.png"
+				     "~/src/smalldisplay.el/sun2.png"))
+			  (ypos (- wtop (* elevation 5) -40))
+			  (cwidth (* cloud 2.6)))
+		     (svg-embed
+		      svg
+		      (expand-file-name sunmoon)
+		      "image/png" nil
+		      :x (+ margin (* stride x) (/ (* stride 3) 2)
+			    (if (< elevation 0)
+				-35
+			      -50))
+		      :y (+ ypos 200
+			    (if (< elevation 0)
+				20
+			      0))
+		      :preserveAspectRatio "xMinYMin meet"
+		      :width (if (< elevation 0)
+				 70
+			       100))
+		     (when (> cloud 0)
 		       (svg-embed
 			svg
-			(expand-file-name sunmoon)
+			(expand-file-name "~/src/smalldisplay.el/clouds1.png")
 			"image/png" nil
 			:x (+ margin (* stride x) (/ (* stride 3) 2)
-			      (if (< elevation 0)
-				  -35
-				-50))
-			:y (+ ypos 200
-			      (if (< elevation 0)
-				  20
-				0))
-			:preserveAspectRatio "xMinYMin meet"
-			:width (if (< elevation 0)
-				   70
-				 100))
-		       (when (> cloud 0)
-			 (svg-embed
-			  svg
-			  (expand-file-name "~/src/smalldisplay.el/clouds1.png")
-			  "image/png" nil
-			  :x (+ margin (* stride x) (/ (* stride 3) 2)
-				(- (/ cwidth 2)))
-			  :y (+ ypos 180)
-			  :width cwidth)))))
-	  (when nil
-	    (svg-embed svg (expand-file-name "~/src/smalldisplay.el/pattern1.png")
-		       "image/png" nil
-		       :x margin
-		       :y (+ wtop wheight)
-		       :width (- width (* margin 2)))))
-	)
+			      (- (/ cwidth 2)))
+			:y (+ ypos 180)
+			:width cwidth)))))
+	(when nil
+	  (svg-embed svg (expand-file-name "~/src/smalldisplay.el/pattern1.png")
+		     "image/png" nil
+		     :x margin
+		     :y (+ wtop wheight)
+		     :width (- width (* margin 2)))))
+      )
     (with-current-buffer (get-buffer-create "*calstation*")
       (erase-buffer)
       (insert-image (svg-image svg :max-width 1100))
