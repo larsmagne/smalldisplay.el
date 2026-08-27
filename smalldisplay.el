@@ -465,7 +465,7 @@
 	  (length 4))
       (dotimes (i length)
 	(cl-incf acc (cdr (elt points i))))
-      (cl-loop for i from length upto (+ 24 length)
+      (cl-loop for i from length upto (min (1- (length points)) (+ 24 length))
 	       collect (cons (- (car (elt points (- i (/ length 2)))) 100)
 			     (prog2
 				 (cl-incf acc (cdr (elt points i)))
@@ -698,7 +698,7 @@
     (let* ((now (time-convert (current-time) 'integer))
 	   (time (decode-time now))
 	   (ctop 960)
-	   (hstride 60)
+	   (hstride 61)
 	   (wstride (/ (- width (* margin 2)) 7)))
       (svg-rectangle svg margin ctop (- width (* margin 2)) (* hstride 8)
 		   :fill "#ffff87")
@@ -780,9 +780,9 @@
 		   "image/png"
 		   nil
 		   :width (- width (* margin 2) -5)
-		   ;; Show the center part of the image.
+		   :preserveAspectRatio "xMinYMin meet"
 		   :x (- margin 2)
-		   :y 1410)
+		   :y (+ ctop (* hstride 8) 8))
 
 	;; Heading.
 	(cl-loop with wstart = margin
@@ -833,7 +833,7 @@
 		       196 196
 		       :fill "#ffff87")
 	(let ((summary (smalldisplay-weather-summary
-			(smalldisplay-weather-data (format-time-string "%F")))))
+			(smalldisplay-weather-data (smalldisplay-date)))))
 	  (svg-embed svg (expand-file-name "~/src/smalldisplay.el/roundthing1.png")
 		     "image/png" nil
 		     :x (- width margin 170)
@@ -863,7 +863,7 @@
 	;; Weather.
 	(let ((wheight 470)
 	      (wtop 430)
-	      (weather (smalldisplay-weather-data (format-time-string "%F"))))
+	      (weather (smalldisplay-weather-data (smalldisplay-date))))
 	  (svg-rectangle svg margin 260
 			 (- width (* margin 2)) 145
 			 :fill "black")
@@ -883,10 +883,27 @@
 			 :stroke-width "2px"
 			 :stroke-color "black"
 			 :fill "#cfebf7")
-	  (svg-rectangle svg
-			 (+ margin 15 1)  (+ wtop 280)
-			 (- width (* margin 2) 30 2) (- wheight 280)
-			 :fill "#1a0107")
+	  (when t
+	    (svg-rectangle svg
+			   (+ margin 15 1)  (+ wtop 280)
+			   (- width (* margin 2) 30 2) (- wheight 280)
+			   :fill "#1a0107"))
+	  (let ((rain (smalldisplay-weather-rain weather)))
+	    (message "%s" rain)
+	    (svg-smooth-line
+	     svg
+	     (smalldisplay-smooth
+	      (cl-loop for pval in rain
+		       for i from 0
+		       collect (cons (+ (* i (/ (- width (* margin 2) -25)
+						(- (float (length rain)) 4)))
+					50)
+				     (+ wtop
+					(- wheight (* (/ pval 24.0) wheight))))))
+	     :stroke-width 7
+	     :fill "none"
+	     :stroke "#d36863"))
+	  ;; Sunmoon clouds.
 	  (cl-loop for x from 0 upto 24 by 3
 		   with stride = (/ (- width (* margin 2)) 24.0)
 		   do
@@ -900,32 +917,35 @@
 		      :font-weight "normal"
 		      :fill "white"
 		      :font-family "Coconino County"))
-		   (when-let ((elem (smalldisplay-weather-hour weather x)))
+		   (when-let ((elem (smalldisplay-weather-hour weather
+							       (1+ x))))
 		     (let* ((cloud (string-to-number
 				    (dom-attr (dom-by-tag elem 'cloudiness)
 					      'percent)))
 			    (elevation 
 			     (smalldisplay-oslo-solar-elevation
-			      (format "%s %02d:30" (format-time-string "%F")
+			      (format "%s %02d:30" (smalldisplay-date)
 				      (1+ x))))
 			    (sunmoon (if (< elevation 0)
-					 "~/src/smalldisplay.el/moon3.png"
+					 "~/src/smalldisplay.el/moon4.png"
 				       "~/src/smalldisplay.el/sun2.png"))
 			    (ypos (- wtop (* elevation 5) -40))
-			    (cwidth (* cloud 2.6))
-			    (isize (smalldisplay-image-size sunmoon)))
+			    (cwidth (* cloud 2.6)))
 		       (svg-embed
 			svg
 			(expand-file-name sunmoon)
 			"image/png" nil
 			:x (+ margin (* stride x) (/ (* stride 3) 2)
 			      (if (< elevation 0)
-				  -25
+				  -35
 				-50))
-			:y (+ ypos 200)
+			:y (+ ypos 200
+			      (if (< elevation 0)
+				  20
+				0))
 			:preserveAspectRatio "xMinYMin meet"
 			:width (if (< elevation 0)
-				   50
+				   70
 				 100))
 		       (when (> cloud 0)
 			 (svg-embed
@@ -955,9 +975,14 @@
 	   when (and
 		 (dom-by-tag elem 'cloudiness)
 		 (equal
-		  (format "%sT%02d:" (format-time-string "%F") hour)
+		  (format "%sT%02d:" (smalldisplay-date) hour)
 		  (substring (dom-attr elem 'from) 0 14)))
 	   return elem))
+
+(defun smalldisplay-date ()
+  (format-time-string "%F")
+  ;;"2026-08-29"
+  )
 
 (defun smalldisplay-calendar-entries (time)
   (cl-loop for event in (nth 3 (car smalldisplay-calendar-entries))
@@ -1001,6 +1026,15 @@
 				    'time)
 	   when (equal (substring (dom-attr point 'from) 0 10) date)
 	   collect point))
+
+(defun smalldisplay-weather-rain (points)
+  (cl-loop for elem in points
+	   when (and (dom-by-tag elem 'precipitation)
+		     (not (dom-by-tag elem 'minTemperature)))
+	   collect (+
+		    (random 24)
+		    (string-to-number
+		     (dom-attr (dom-by-tag elem 'precipitation) 'value)))))
 
 (defun smalldisplay-weather-summary (weather)
   (cl-loop for elem in weather
