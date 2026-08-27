@@ -931,9 +931,11 @@
 	   (smalldisplay-smooth
 	    (cl-loop for pval in rain
 		     for i from 0
-		     collect (cons (+ (* i (/ (- width (* margin 2) -25)
+		     for rx = (+ (* i (/ (- width (* margin 2) -25)
 					      (- (float (length rain)) 4)))
 				      margin -10)
+		     when (< rx (* width 1.3))
+		     collect (cons rx
 				   (+ wtop
 				      (- wheight (* (/ pval 24.0) wheight 1.5)
 					 50)))))
@@ -942,10 +944,11 @@
 	   :stroke "white")
 	  ;; Blank out zero-value rains so that there's only a line
 	  ;; when it's actually raining.
-	  (svg-rectangle svg
-			 (+ margin 15) (+ wtop 448)
-			 (- width (* margin 2) 30) 20
-			 :fill "#1a0107"))
+	  (when t
+	    (svg-rectangle svg
+			   (+ margin 15) (+ wtop 448)
+			   (- width (* margin 2) 30) 20
+			   :fill "#1a0107")))
 	;; Sunmoon clouds.
 	(cl-loop for x from 0 upto 24 by 3
 		 with stride = (/ (- width (* margin 2)) 24.0)
@@ -1034,8 +1037,8 @@
 	   return elem))
 
 (defun smalldisplay-date ()
-  ;;(format-time-string "%F")
-  "2026-08-28"
+  (format-time-string "%F")
+  ;;"2026-08-28"
   )
 
 (defun smalldisplay-calendar-entries (time)
