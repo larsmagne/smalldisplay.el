@@ -460,7 +460,7 @@
       (buffer-string))))
 
 (defun smalldisplay-smooth (points)
-  (if (not points)
+  (if (length< points 4)
       nil
     (let ((acc 0)
 	  (length 4))
