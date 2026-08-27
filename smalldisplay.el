@@ -166,7 +166,7 @@
   (smalldisplay-make-dielman1-image)
   (smalldisplay-make-dielman4-image)
   (smalldisplay-make-clock-image)
-  (smalldisplay-seeedframe)
+  ;;(smalldisplay-seeedframe)
   (ignore-errors
     (eval-at-async "lights" "dielman1" 8703 `(smalldisplay-notify)))
   (ignore-errors
@@ -683,13 +683,28 @@
 		  "--file"
 		  "/var/www/html/smalldisplay/image-seeedframe.png")))
 
+(defun smalldisplay-make-calstation ()
+  (with-temp-buffer
+    ;;(set-buffer-multibyte nil)
+    (svg-print (smalldisplay-calstation))
+    (write-region (point-min) (point-max) "/tmp/a.svg")
+    (call-process-region (point-min) (point-max) "rsvg-convert"
+			 t (current-buffer))
+    (write-region
+     (point-min) (point-max)
+     "/var/www/html/smalldisplay/image-seeedframe-pre.png")
+    (call-process "~/src/seeedframe/photoframe-upload.sh" nil nil nil
+		  "/var/www/html/smalldisplay/image-seeedframe-pre.png"
+		  "--file"
+		  "/var/www/html/smalldisplay/image-seeedframe.png")))
+
 (defun smalldisplay-calstation ()
   (interactive)
   (unless smalldisplay-calendar-entries
     (smalldisplay-get-calendar))
   (let* ((width 1200)
 	 (height 1600)
-	 (margin 50)
+	 (margin 2)
 	 (svg (svg-create width height)))
     (svg-rectangle svg 0 0 width height
 		   :fill "white")
@@ -697,8 +712,8 @@
     ;; current month.
     (let* ((now (time-convert (current-time) 'integer))
 	   (time (decode-time now))
-	   (ctop 960)
-	   (hstride 61)
+	   (ctop (+ 960 margin))
+	   (hstride 63)
 	   (wstride (/ (- width (* margin 2)) 7)))
       (svg-rectangle svg margin ctop (- width (* margin 2)) (* hstride 8)
 		     :fill "#ffff87")
@@ -834,18 +849,19 @@
 		:fill "black"
 		:font-family "Coconino County Smooth"))
       ;; Temperature summary.
-      (svg-rectangle svg 950 margin
+      (svg-rectangle svg (- width 200 margin) margin
 		     200 200
 		     :fill "black")
-      (svg-rectangle svg 952 (+ margin 2)
+      (svg-rectangle svg (- width 200 -2 margin) (+ margin 2)
 		     196 196
-		     :fill "#ffff87")
+		     :fill "#7888c8")
       (let ((summary (smalldisplay-weather-summary
 		      (smalldisplay-weather-data (smalldisplay-date)))))
 	(svg-embed svg (expand-file-name "~/src/smalldisplay.el/roundthing1.png")
 		   "image/png" nil
-		   :x (- width margin 170)
-		   :y 110
+		   :x (- width margin 140)
+		   :y 60
+		   :preserveAspectRatio "xMinYMin meet"
 		   :height "75px")
 	(svg-text
 	 svg (format "%d°-%d°"
@@ -869,35 +885,37 @@
 	 :font-family "Coconino County Smooth"))
 
       ;; Weather.
-      (let ((wheight 470)
-	    (wtop 430)
+      (let ((wheight 503)
+	    (wtop (+ 390 margin))
 	    (weather (smalldisplay-weather-data (smalldisplay-date))))
-	(svg-rectangle svg margin 260
+	(svg-rectangle svg margin 210
 		       (- width (* margin 2)) 145
 		       :fill "black")
 	(svg-embed svg (expand-file-name "~/src/smalldisplay.el/pattern3.png")
 		   "image/png" nil
 		   :x margin
-		   :y 250
+		   :y (+ 230 margin)
+		   :preserveAspectRatio "xMinYMin meet"
 		   :width (- width (* margin 2)))
+	;; Weather box.
 	(svg-embed svg (expand-file-name "~/src/smalldisplay.el/frame1.jpg")
 		   "image/jpeg" nil
 		   :x margin
-		   :y 210
-		   :width (- width (* margin 2) -4))
+		   :y (+ 365 margin)
+		   :preserveAspectRatio "xMinYMin meet"
+		   :width (- width (* margin 2)))
 	(svg-rectangle svg
 		       (+ margin 15) wtop
 		       (- width (* margin 2) 30) wheight
 		       :stroke-width "2px"
 		       :stroke-color "black"
-		       :fill "#cfebf7")
+		       :fill "#afcbf7")
 	(when t
 	  (svg-rectangle svg
 			 (+ margin 15 1)  (+ wtop 280)
 			 (- width (* margin 2) 30 2) (- wheight 280)
 			 :fill "#1a0107"))
 	(let ((rain (smalldisplay-weather-rain weather)))
-	  (message "%s" rain)
 	  (svg-smooth-line
 	   svg
 	   (smalldisplay-smooth
@@ -905,12 +923,12 @@
 		     for i from 0
 		     collect (cons (+ (* i (/ (- width (* margin 2) -25)
 					      (- (float (length rain)) 4)))
-				      50)
+				      margin -10)
 				   (+ wtop
 				      (- wheight (* (/ pval 24.0) wheight))))))
 	   :stroke-width 7
 	   :fill "none"
-	   :stroke "#d36863"))
+	   :stroke "#cd6683"))
 	;; Sunmoon clouds.
 	(cl-loop for x from 0 upto 24 by 3
 		 with stride = (/ (- width (* margin 2)) 24.0)
@@ -935,7 +953,7 @@
 			    (format "%s %02d:30" (smalldisplay-date)
 				    (1+ x))))
 			  (sunmoon (if (< elevation 0)
-				       "~/src/smalldisplay.el/moon4.png"
+				       "~/src/smalldisplay.el/moon5.png"
 				     "~/src/smalldisplay.el/sun2.png"))
 			  (ypos (- wtop (* elevation 5) -40))
 			  (cwidth (* cloud 2.6)))
@@ -949,7 +967,7 @@
 			      -50))
 		      :y (+ ypos 200
 			    (if (< elevation 0)
-				20
+				10
 			      0))
 		      :preserveAspectRatio "xMinYMin meet"
 		      :width (if (< elevation 0)
@@ -976,7 +994,8 @@
       (insert-image (svg-image svg :max-width 1100))
       (insert "\n\n")
       (when-let ((window (get-buffer-window nil t)))
-	(set-window-point window (point-max))))))
+	(set-window-point window (point-max))))
+    svg))
 
 (defun smalldisplay-weather-hour (weather hour)
   (cl-loop for elem in weather
