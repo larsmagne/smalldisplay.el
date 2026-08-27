@@ -690,8 +690,18 @@
 		 (setq smalldisplay-weather-data nil
 		       smalldisplay-calendar-entries nil)
 		 (smalldisplay-make-calstation)
-		 (run-at-time "00:01" nil func)))
-    (run-at-time "00:01" nil func)))
+		 (run-at-time (smalldisplay-after-midnight) nil func)))
+    (run-at-time (smalldisplay-after-midnight) nil func)))
+
+(defun smalldisplay-after-midnight ()
+  (- (float-time
+      (let ((time (decode-time)))
+	(setq time (decoded-time-add time (make-decoded-time :day 1)))
+	(setf (decoded-time-minute time) 1)
+	(setf (decoded-time-hour time) 0)
+	(setf (decoded-time-second time) 0)
+	(encode-time time)))
+     (float-time)))
 
 (defun smalldisplay-make-calstation ()
   (with-temp-buffer
