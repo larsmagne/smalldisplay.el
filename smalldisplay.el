@@ -150,6 +150,7 @@
   ;; triggered via `smalldisplay-notify'.
   (run-at-time 1 60 #'smalldisplay-perhaps-display-rocket-sam)
   (run-at-time 600 600 #'smalldisplay-frame)
+  (smalldisplay-start-calstation)
   (smalldisplay-clock-runner))
 
 (defvar smalldisplay--last-update nil)
@@ -682,6 +683,15 @@
 		  "/var/www/html/smalldisplay/image-seeedframe-pre.png"
 		  "--file"
 		  "/var/www/html/smalldisplay/image-seeedframe.png")))
+
+(defun smalldisplay-start-calstation ()
+  (let ((func nil))
+    (setq func (lambda ()
+		 (setq smalldisplay-weather-data nil
+		       smalldisplay-calendar-entries nil)
+		 (smalldisplay-make-calstation)
+		 (run-at-time "00:01" nil func)))
+    (run-at-time "00:01" nil func)))
 
 (defun smalldisplay-make-calstation ()
   (with-temp-buffer
