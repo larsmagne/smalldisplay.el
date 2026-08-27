@@ -935,10 +935,17 @@
 					      (- (float (length rain)) 4)))
 				      margin -10)
 				   (+ wtop
-				      (- wheight (* (/ pval 24.0) wheight))))))
+				      (- wheight (* (/ pval 24.0) wheight 1.5)
+					 50)))))
 	   :stroke-width 7
 	   :fill "none"
-	   :stroke "white"))
+	   :stroke "white")
+	  ;; Blank out zero-value rains so that there's only a line
+	  ;; when it's actually raining.
+	  (svg-rectangle svg
+			 (+ margin 15) (+ wtop 448)
+			 (- width (* margin 2) 30) 20
+			 :fill "#1a0107"))
 	;; Sunmoon clouds.
 	(cl-loop for x from 0 upto 24 by 3
 		 with stride = (/ (- width (* margin 2)) 24.0)
@@ -992,7 +999,7 @@
 			      (- (/ cwidth 2)))
 			:y (+ ypos 180)
 			:width cwidth))
-		     (when (> cloud 80)
+		     (when nil
 		       (svg-embed
 			svg
 			(expand-file-name "~/src/smalldisplay.el/lightning2.png")
@@ -1027,8 +1034,8 @@
 	   return elem))
 
 (defun smalldisplay-date ()
-  (format-time-string "%F")
-  ;;"2026-08-29"
+  ;;(format-time-string "%F")
+  "2026-08-28"
   )
 
 (defun smalldisplay-calendar-entries (time)
@@ -1077,9 +1084,16 @@
 (defun smalldisplay-weather-rain (points)
   (cl-loop for elem in points
 	   when (and (dom-by-tag elem 'precipitation)
-		     (not (dom-by-tag elem 'minTemperature)))
+		     (equal (dom-attr elem 'to)
+			    (format-time-string
+			     "%FT%TZ"
+			     (encode-time
+			      (decoded-time-add
+			       (iso8601-parse (dom-attr elem 'from))
+			       (make-decoded-time :hour 1)))
+			     "Z")))
 	   collect (+
-		    (random 24)
+		    0
 		    (string-to-number
 		     (dom-attr (dom-by-tag elem 'precipitation) 'value)))))
 
