@@ -948,17 +948,15 @@
 	(let ((rain (smalldisplay-weather-rain weather)))
 	  (svg-smooth-line
 	   svg
-	   (smalldisplay-smooth
-	    (cl-loop for pval in rain
-		     for i from 0
-		     for rx = (+ (* i (/ (- width (* margin 2) -25)
-					      (- (float (length rain)) 4)))
-				      margin -10)
-		     when (< rx (* width 1.3))
-		     collect (cons rx
-				   (+ wtop
-				      (- wheight (* (/ pval 24.0) wheight 1.5)
-					 50)))))
+	   (cl-loop for pval in rain
+		    for i from 0
+		    for rx = (+ (* i (/ (- width (* margin 2) -25)
+					(float (length rain))))
+				margin -10)
+		    collect (cons rx
+				  (+ wtop
+				     (- wheight (* (/ pval 24.0) wheight 1.5)
+					50))))
 	   :stroke-width 7
 	   :fill "none"
 	   :stroke "white")
@@ -1046,6 +1044,13 @@
       (when-let ((window (get-buffer-window nil t)))
 	(set-window-point window (point-max))))
     svg))
+
+(defun smalldisplay-add-points (points)
+  (cons (car points)
+	(cons (car points)
+	      (cons (car points)
+		    (cons (car points)
+			  points)))))
 
 (defun smalldisplay-weather-hour (weather hour)
   (cl-loop for elem in weather
