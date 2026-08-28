@@ -1109,17 +1109,19 @@
 	   when (equal (substring (dom-attr point 'from) 0 10) date)
 	   collect point))
 
+(defun smalldisplay-hour-elem-p (elem)
+  (equal (dom-attr elem 'to)
+	 (format-time-string
+	  "%FT%TZ"
+	  (encode-time
+	   (decoded-time-add (iso8601-parse (dom-attr elem 'from))
+			     (make-decoded-time :hour 1)))
+	  "Z")))
+
 (defun smalldisplay-weather-rain (points)
   (cl-loop for elem in points
 	   when (and (dom-by-tag elem 'precipitation)
-		     (equal (dom-attr elem 'to)
-			    (format-time-string
-			     "%FT%TZ"
-			     (encode-time
-			      (decoded-time-add
-			       (iso8601-parse (dom-attr elem 'from))
-			       (make-decoded-time :hour 1)))
-			     "Z")))
+		     (smalldisplay-hour-elem-p elem))
 	   collect (+
 		    0
 		    (string-to-number
@@ -1133,7 +1135,8 @@
 	   maximize (string-to-number temp) into max-temp
 	   when temp
 	   minimize (string-to-number temp) into min-temp
-	   when rain
+	   when (and rain
+		     (smalldisplay-hour-elem-p elem))
 	   sum (string-to-number rain) into rain-total
 	   finally (return (list :max-temp max-temp
 				 :min-temp min-temp
