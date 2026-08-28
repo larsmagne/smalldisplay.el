@@ -929,12 +929,22 @@
 		       (- width (* margin 2) 30) wheight
 		       :stroke-width "2px"
 		       :stroke-color "black"
-		       :fill "#7888c8")
+		       :fill "#7888c8")		   
 	(when t
 	  (svg-rectangle svg
 			 (+ margin 15 1)  (+ wtop 330)
 			 (- width (* margin 2) 30 2) (- wheight 330)
 			 :fill "#1a0107"))
+	(svg-embed svg
+		   (seq-random-elt
+		    (directory-files "~/src/smalldisplay.el/"
+				     t "shape[0-9]+\\.png\\'"))
+		   "image/png"
+		   nil
+		   :height 200
+		   :preserveAspectRatio "xMinYMin meet"
+		   :x (+ margin 70)
+		   :y (+ wtop 330 -200))
 	(let ((rain (smalldisplay-weather-rain weather)))
 	  (svg-smooth-line
 	   svg
