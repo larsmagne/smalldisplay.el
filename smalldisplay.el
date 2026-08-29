@@ -505,7 +505,7 @@
 			  for elem in elems
 			  for rain = (dom-by-tag elem 'precipitation)
 			  collect (cons i (string-to-number
-					   (dom-attr rain 'maxvalue)))))))))
+					   (dom-attr rain 'value)))))))))
       (setq smalldisplay-rain rain)
       rain)))
 
@@ -952,7 +952,7 @@
 		    for i from 0
 		    for rx = (+ (* i (/ (- width (* margin 2) -25)
 					(float (length rain))))
-				margin -10)
+				margin -10 40)
 		    collect (cons rx
 				  (+ wtop
 				     (- wheight (* (/ pval 24.0) wheight 1.5)
