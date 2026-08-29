@@ -505,7 +505,7 @@
 			  for elem in elems
 			  for rain = (dom-by-tag elem 'precipitation)
 			  collect (cons i (string-to-number
-					   (dom-attr rain 'value)))))))))
+					   (dom-attr rain 'maxvalue)))))))))
       (setq smalldisplay-rain rain)
       rain)))
 
@@ -1125,7 +1125,7 @@
 	   collect (+
 		    0
 		    (string-to-number
-		     (dom-attr (dom-by-tag elem 'precipitation) 'value)))))
+		     (dom-attr (dom-by-tag elem 'precipitation) 'maxvalue)))))
 
 (defun smalldisplay-weather-summary (weather)
   (cl-loop for elem in weather
