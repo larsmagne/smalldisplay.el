@@ -852,9 +852,9 @@
 		svg
 		(let ((dnow (decode-time now)))
 		  (format "%s %d %s %d"
-			  (elt '("lundi" "mardi" "mercredi" "jeudi"
-				 "vendredi" "samedi" "dimanche")
-			       (1- (decoded-time-weekday dnow)))
+			  (elt '("dimanche" "lundi" "mardi" "mercredi" "jeudi"
+				 "vendredi" "samedi")
+			       (decoded-time-weekday dnow))
 			  (decoded-time-day dnow)
 			  (elt '("" "janvier" "février" "mars" "avril" "mai"
 				 "juin" "juillet" "août" "septembre" "octobre"
