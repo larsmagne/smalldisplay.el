@@ -784,7 +784,7 @@
 			 :fill (if (= (decoded-time-month time)
 				      (decoded-time-month (decode-time now)))
 				   "black"
-				 "grey")
+				 "#555")
 			 :font-family "Coconino County")
 	       (cl-loop for event in (smalldisplay-calendar-entries time)
 			for i from 0
@@ -804,7 +804,7 @@
 			 :fill (if (= (decoded-time-month time)
 				      (decoded-time-month (decode-time now)))
 				   "black"
-				 "grey")
+				 "black")
 			 :font-family "Coconino County"))
 	       (setq time (decoded-time-add time (make-decoded-time :day 1))))
       (svg-embed svg
